@@ -3,7 +3,7 @@ package arthurkeusch.taslesontaslimage;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 
-public class HelloController {
+public class TasLeSonTasLImageController {
     @FXML
     private Label welcomeText;
 
