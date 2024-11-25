@@ -23,15 +23,15 @@ public class TraitementImage {
         Imgproc.cvtColor(matImage, matRgb, Imgproc.COLOR_BGR2RGB);
 
         // Récupérer les dimensions
-        int hauteur = matGris.rows();
-        int largeur = matGris.cols();
+        int hauteur = matRgb.rows();
+        int largeur = matRgb.cols();
 
         // Créer une ArrayList<ArrayList<Integer>> pour stocker les pixels
         ArrayList<ArrayList<Integer>> pixels = new ArrayList<>();
         for (int y = 0; y < hauteur; y++) {
             ArrayList<Integer> ligne = new ArrayList<>();
             for (int x = 0; x < largeur; x++) {
-                int gris = (int) matGris.get(y, x)[0]; // Valeur du pixel
+                int gris = (int) matRgb.get(y, x)[0]; // Valeur du pixel
                 ligne.add(gris);
             }
             pixels.add(ligne);
