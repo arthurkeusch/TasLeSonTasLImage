@@ -12,7 +12,7 @@ public class TasLeSonTasLImage extends Application {
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(TasLeSonTasLImage.class.getResource("TasLeSonTasLImage-view.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 320, 240);
-        stage.setTitle("Hello!");
+        stage.setTitle("T'as le son ! T'as l'image !");
         stage.setScene(scene);
         stage.show();
     }

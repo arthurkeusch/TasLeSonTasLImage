@@ -9,6 +9,6 @@ public class TasLeSonTasLImageController {
 
     @FXML
     protected void onHelloButtonClick() {
-        welcomeText.setText("Welcome to JavaFX Application!");
+        welcomeText.setText("Lecture de l'image en format audio");
     }
 }
