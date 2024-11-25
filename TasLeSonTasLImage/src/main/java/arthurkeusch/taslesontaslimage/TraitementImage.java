@@ -44,6 +44,7 @@ public class TraitementImage {
         return new Image(pixels);
     }
 
+
     /**
      * Convertit une image en niveaux de gris à partir d'un fichier.
      *
@@ -76,6 +77,7 @@ public class TraitementImage {
 
         return new Image(pixelsGris);
     }
+
 
     /**
      * Compresse une image en la redimensionnant à 64x64 pixels.
@@ -110,5 +112,14 @@ public class TraitementImage {
         }
 
         return new Image(pixelsCompressee);
+    }
+
+
+    /**
+     * Génère la matrice des fréquences correspondent à l'image.
+     * @param image image à partir de laquelle on doit générer la matrice.
+     */
+    public void generateImageSound(Image image) {
+
     }
 }
