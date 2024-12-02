@@ -46,6 +46,12 @@ public class TasLeSonTasLImage extends Application {
             System.out.println("Image compressée à 64x64 pixels avec succès !");
             imageCompressee.printImage();
 
+            // Tester la génération de son à partir d'une image
+            System.out.println("\n=== Test : Génération de matrice sonore ===");
+            TraitementImage.generateImageSound(imageCompressee);
+            System.out.println("Matrice sonore générée avec succès !");
+            imageCompressee.printSound();
+
         } catch (IllegalArgumentException e) {
             System.err.println("Erreur : " + e.getMessage());
         } catch (Exception e) {
