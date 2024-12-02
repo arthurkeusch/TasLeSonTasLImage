@@ -116,10 +116,22 @@ public class TraitementImage {
 
 
     /**
-     * Génère la matrice des fréquences correspondent à l'image.
-     * @param image image à partir de laquelle on doit générer la matrice.
+     * Génère la matrice des fréquences correspondant à l'image.
+     * Les valeurs des pixels (0 à 15) sont converties en fréquences (1000 Hz à 4000 Hz).
+     *
+     * @param image L'image à partir de laquelle générer la matrice sonore.
      */
-    public void generateImageSound(Image image) {
-
+    public static void generateImageSound(Image image) {
+        ArrayList<ArrayList<Integer>> pixels = image.getImage();
+        ArrayList<ArrayList<Double>> soundMatrix = new ArrayList<>();
+        for (ArrayList<Integer> row : pixels) {
+            ArrayList<Double> soundRow = new ArrayList<>();
+            for (Integer pixel : row) {
+                double frequency = 1000 + (pixel / 15.0) * (4000 - 1000);
+                soundRow.add(frequency);
+            }
+            soundMatrix.add(soundRow);
+        }
+        image.setSound(soundMatrix);
     }
 }
