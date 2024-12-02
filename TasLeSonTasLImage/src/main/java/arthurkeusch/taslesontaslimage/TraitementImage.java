@@ -80,10 +80,11 @@ public class TraitementImage {
 
 
     /**
-     * Compresse une image en la redimensionnant à 64x64 pixels.
+     * Compresse une image en la redimensionnant à 64x64 pixels et réduit les niveaux
+     * de gris à une échelle de 0 à 15.
      *
      * @param imageOriginale L'image à compresser.
-     * @return L'image compressée à une taille de 64x64 pixels.
+     * @return L'image compressée à une taille de 64x64 pixels avec 16 niveaux de gris.
      */
     public static Image compresserEn64x64(Image imageOriginale) {
         ArrayList<ArrayList<Integer>> pixelsOriginaux = imageOriginale.getImage();
@@ -106,7 +107,8 @@ public class TraitementImage {
             ArrayList<Integer> ligne = new ArrayList<>();
             for (int x = 0; x < 64; x++) {
                 int gris = (int) mat64x64.get(y, x)[0];
-                ligne.add(gris);
+                int niveauGris = (gris * 15) / 255;
+                ligne.add(niveauGris);
             }
             pixelsCompressee.add(ligne);
         }
@@ -116,22 +118,36 @@ public class TraitementImage {
 
 
     /**
-     * Génère la matrice des fréquences correspondant à l'image.
-     * Les valeurs des pixels (0 à 15) sont converties en fréquences (1000 Hz à 4000 Hz).
+     * Génère des listes d'amplitudes correspondant aux fréquences pour chaque colonne de l'image.
+     * Chaque colonne sera représentée par une liste contenant les amplitudes calculées pour les fréquences de base.
      *
-     * @param image L'image à partir de laquelle générer la matrice sonore.
+     * @param image L'image à partir de laquelle générer les données sonores.
      */
     public static void generateImageSound(Image image) {
         ArrayList<ArrayList<Integer>> pixels = image.getImage();
-        ArrayList<ArrayList<Double>> soundMatrix = new ArrayList<>();
-        for (ArrayList<Integer> row : pixels) {
-            ArrayList<Double> soundRow = new ArrayList<>();
-            for (Integer pixel : row) {
-                double frequency = 1000 + (pixel / 15.0) * (4000 - 1000);
-                soundRow.add(frequency);
-            }
-            soundMatrix.add(soundRow);
+        ArrayList<ArrayList<Double>> sound = new ArrayList<>();
+
+        int rows = pixels.size();
+        int cols = pixels.get(0).size();
+
+        double[] baseFrequencies = new double[rows];
+        for (int i = 0; i < rows; i++) {
+            baseFrequencies[i] = 1000 + (i / (double) (rows - 1)) * (4000 - 1000);
         }
-        image.setSound(soundMatrix);
+
+        for (int col = 0; col < cols; col++) {
+            ArrayList<Double> amplitudes = new ArrayList<>();
+
+            for (int row = 0; row < rows; row++) {
+                int pixelValue = pixels.get(row).get(col);
+
+                double amplitude = pixelValue / 255.0;
+                amplitudes.add(amplitude);
+            }
+
+            sound.add(amplitudes);
+        }
+
+        image.setSound(sound);
     }
 }
