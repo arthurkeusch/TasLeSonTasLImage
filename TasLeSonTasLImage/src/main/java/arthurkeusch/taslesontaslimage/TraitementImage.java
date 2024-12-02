@@ -130,11 +130,6 @@ public class TraitementImage {
         int rows = pixels.size();
         int cols = pixels.get(0).size();
 
-        double[] baseFrequencies = new double[rows];
-        for (int i = 0; i < rows; i++) {
-            baseFrequencies[i] = 1000 + (i / (double) (rows - 1)) * (4000 - 1000);
-        }
-
         for (int col = 0; col < cols; col++) {
             ArrayList<Double> amplitudes = new ArrayList<>();
 

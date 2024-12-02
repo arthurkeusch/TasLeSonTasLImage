@@ -19,16 +19,14 @@ public class TasLeSonTasLImage extends Application {
     }
 
     public static void main(String[] args) {
+        //launch();
 
-        launch();
-        // Charger la bibliothèque native OpenCV
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
         // Chemin vers l'image d'entrée
-        String cheminImage = "src/main/images/trait_blanc_milieu.png"; // Remplacez par le chemin de votre image
+        String cheminImage = "src/main/images/traits_horizontaux.png";
 
         try {
-            // Tester le chargement d'une image
             System.out.println("=== Test : Charger une image ===");
             Image imageChargee = TraitementImage.chargerImage(cheminImage);
             System.out.println("Image chargée avec succès !");
@@ -52,11 +50,15 @@ public class TasLeSonTasLImage extends Application {
             System.out.println("Matrice sonore générée avec succès !");
             imageCompressee.printSound();
 
+            // Lecture du son généré
+            System.out.println("\n=== Test : Lecture du son ===");
+            CreationAudio.generateAndPlaySound(imageCompressee);
+            System.out.println("Son généré et lu avec succès !");
+
         } catch (IllegalArgumentException e) {
             System.err.println("Erreur : " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Une erreur inattendue est survenue : " + e.getMessage());
         }
     }
-
 }
