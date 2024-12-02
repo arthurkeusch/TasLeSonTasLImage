@@ -6,19 +6,8 @@ import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 
-/**
- * Cette classe fournit des méthodes pour charger, convertir et traiter des images.
- * Elle inclut des opérations telles que la conversion en niveaux de gris et la compression en 64x64 pixels.
- */
 public class TraitementImage {
 
-    /**
-     * Charge une image à partir d'un fichier et la convertit en une structure Image (ArrayList<ArrayList<Integer>>).
-     *
-     * @param cheminImage Le chemin du fichier image à charger.
-     * @return L'objet Image avec les pixels de l'image chargée.
-     * @throws IllegalArgumentException Si l'image ne peut pas être chargée.
-     */
     public static Image chargerImage(String cheminImage) {
         Mat matImage = Imgcodecs.imread(cheminImage);
         if (matImage.empty()) {
@@ -44,14 +33,6 @@ public class TraitementImage {
         return new Image(pixels);
     }
 
-
-    /**
-     * Convertit une image en niveaux de gris à partir d'un fichier.
-     *
-     * @param cheminImage Le chemin du fichier image à convertir.
-     * @return L'objet Image avec les pixels convertis en niveaux de gris.
-     * @throws IllegalArgumentException Si l'image ne peut pas être chargée.
-     */
     public static Image convertirEnNiveauxDeGris(String cheminImage) {
         Mat matImage = Imgcodecs.imread(cheminImage);
         if (matImage.empty()) {
@@ -78,14 +59,6 @@ public class TraitementImage {
         return new Image(pixelsGris);
     }
 
-
-    /**
-     * Compresse une image en la redimensionnant à 64x64 pixels et réduit les niveaux
-     * de gris à une échelle de 0 à 15.
-     *
-     * @param imageOriginale L'image à compresser.
-     * @return L'image compressée à une taille de 64x64 pixels avec 16 niveaux de gris.
-     */
     public static Image compresserEn64x64(Image imageOriginale) {
         ArrayList<ArrayList<Integer>> pixelsOriginaux = imageOriginale.getImage();
         int hauteurOriginale = pixelsOriginaux.size();
@@ -116,13 +89,6 @@ public class TraitementImage {
         return new Image(pixelsCompressee);
     }
 
-
-    /**
-     * Génère des listes d'amplitudes correspondant aux fréquences pour chaque colonne de l'image.
-     * Chaque colonne sera représentée par une liste contenant les amplitudes calculées pour les fréquences de base.
-     *
-     * @param image L'image à partir de laquelle générer les données sonores.
-     */
     public static void generateImageSound(Image image) {
         ArrayList<ArrayList<Integer>> pixels = image.getImage();
         ArrayList<ArrayList<Double>> sound = new ArrayList<>();
@@ -136,7 +102,8 @@ public class TraitementImage {
             for (int row = 0; row < rows; row++) {
                 int pixelValue = pixels.get(row).get(col);
 
-                double amplitude = pixelValue / 255.0;
+                // Conserver la valeur brute (non normalisée)
+                double amplitude = pixelValue / 15.0; // Utilisation directe des niveaux de gris compressés (0 à 15)
                 amplitudes.add(amplitude);
             }
 

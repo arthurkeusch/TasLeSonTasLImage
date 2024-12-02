@@ -14,7 +14,6 @@ public class CreationAudio {
 
         // Paramètres du son
         int sampleRate = 44100; // Fréquence d'échantillonnage standard (44,1 kHz)
-        int durationMs = 1000; // Durée totale de 1 seconde
         int samplesPerFrame = sampleRate / 64; // Nombre d'échantillons pour 1/64e de seconde
         int numFrames = soundMatrix.size();
         byte[] audioBuffer = new byte[numFrames * samplesPerFrame];
@@ -33,12 +32,12 @@ public class CreationAudio {
                 // Combinaison des fréquences et des amplitudes
                 for (int i = 0; i < amplitudes.size(); i++) {
                     double frequency = minFrequency + (i * (maxFrequency - minFrequency) / amplitudes.size());
-                    double amplitude = amplitudes.get(i);
+                    double amplitude = amplitudes.get(i); // Utilisation directe des amplitudes brutes
                     double time = (double) (frame * samplesPerFrame + sample) / sampleRate;
                     sampleValue += amplitude * Math.sin(2.0 * Math.PI * frequency * time);
                 }
 
-                // Normalisation et conversion en byte
+                // Pas de normalisation immédiate
                 sampleValue = Math.max(-1.0, Math.min(1.0, sampleValue)); // Limiter à [-1, 1]
                 audioBuffer[frame * samplesPerFrame + sample] = (byte) (sampleValue * 127);
             }
