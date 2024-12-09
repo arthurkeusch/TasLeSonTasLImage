@@ -8,31 +8,6 @@ import java.util.ArrayList;
 
 public class TraitementImage {
 
-    public static ImageMatrice chargerImage(String cheminImage) {
-        Mat matImage = Imgcodecs.imread(cheminImage);
-        if (matImage.empty()) {
-            throw new IllegalArgumentException("Impossible de charger l'image : " + cheminImage);
-        }
-
-        Mat matRgb = new Mat();
-        Imgproc.cvtColor(matImage, matRgb, Imgproc.COLOR_BGR2RGB);
-
-        int hauteur = matRgb.rows();
-        int largeur = matRgb.cols();
-
-        ArrayList<ArrayList<Integer>> pixels = new ArrayList<>();
-        for (int y = 0; y < hauteur; y++) {
-            ArrayList<Integer> ligne = new ArrayList<>();
-            for (int x = 0; x < largeur; x++) {
-                int gris = (int) matRgb.get(y, x)[0];
-                ligne.add(gris);
-            }
-            pixels.add(ligne);
-        }
-
-        return new ImageMatrice(pixels);
-    }
-
     public static ImageMatrice convertirEnNiveauxDeGris(String cheminImage) {
         Mat matImage = Imgcodecs.imread(cheminImage);
         if (matImage.empty()) {
@@ -89,27 +64,7 @@ public class TraitementImage {
         return new ImageMatrice(pixelsCompressee);
     }
 
-    public static void generateImageSound(ImageMatrice image) {
-        ArrayList<ArrayList<Integer>> pixels = image.getImage();
-        ArrayList<ArrayList<Double>> sound = new ArrayList<>();
-
-        int rows = pixels.size();
-        int cols = pixels.get(0).size();
-
-        for (int col = 0; col < cols; col++) {
-            ArrayList<Double> amplitudes = new ArrayList<>();
-
-            for (int row = 0; row < rows; row++) {
-                int pixelValue = pixels.get(row).get(col);
-
-                // Conserver la valeur brute (non normalisée)
-                double amplitude = pixelValue / 15.0; // Utilisation directe des niveaux de gris compressés (0 à 15)
-                amplitudes.add(amplitude);
-            }
-
-            sound.add(amplitudes);
-        }
-
-        image.setSound(sound);
+    public ImageMatrice traitement(String cheminImage) {
+        return compresserEn64x64(convertirEnNiveauxDeGris(cheminImage));
     }
 }
