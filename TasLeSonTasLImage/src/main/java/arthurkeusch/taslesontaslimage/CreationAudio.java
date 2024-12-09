@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 public class CreationAudio {
 
-    public static void generateAndPlaySound(Image image) {
+    public static void generateAndPlaySound(ImageMatrice image) {
         ArrayList<ArrayList<Double>> soundMatrix = image.getSound();
 
         if (soundMatrix == null || soundMatrix.isEmpty()) {

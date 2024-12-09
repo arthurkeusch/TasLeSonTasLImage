@@ -8,7 +8,7 @@ import java.util.ArrayList;
 
 public class TraitementImage {
 
-    public static Image chargerImage(String cheminImage) {
+    public static ImageMatrice chargerImage(String cheminImage) {
         Mat matImage = Imgcodecs.imread(cheminImage);
         if (matImage.empty()) {
             throw new IllegalArgumentException("Impossible de charger l'image : " + cheminImage);
@@ -30,10 +30,10 @@ public class TraitementImage {
             pixels.add(ligne);
         }
 
-        return new Image(pixels);
+        return new ImageMatrice(pixels);
     }
 
-    public static Image convertirEnNiveauxDeGris(String cheminImage) {
+    public static ImageMatrice convertirEnNiveauxDeGris(String cheminImage) {
         Mat matImage = Imgcodecs.imread(cheminImage);
         if (matImage.empty()) {
             throw new IllegalArgumentException("Impossible de charger l'image : " + cheminImage);
@@ -56,10 +56,10 @@ public class TraitementImage {
             pixelsGris.add(ligne);
         }
 
-        return new Image(pixelsGris);
+        return new ImageMatrice(pixelsGris);
     }
 
-    public static Image compresserEn64x64(Image imageOriginale) {
+    public static ImageMatrice compresserEn64x64(ImageMatrice imageOriginale) {
         ArrayList<ArrayList<Integer>> pixelsOriginaux = imageOriginale.getImage();
         int hauteurOriginale = pixelsOriginaux.size();
         int largeurOriginale = pixelsOriginaux.get(0).size();
@@ -86,10 +86,10 @@ public class TraitementImage {
             pixelsCompressee.add(ligne);
         }
 
-        return new Image(pixelsCompressee);
+        return new ImageMatrice(pixelsCompressee);
     }
 
-    public static void generateImageSound(Image image) {
+    public static void generateImageSound(ImageMatrice image) {
         ArrayList<ArrayList<Integer>> pixels = image.getImage();
         ArrayList<ArrayList<Double>> sound = new ArrayList<>();
 

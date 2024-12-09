@@ -7,7 +7,7 @@ import java.util.ArrayList;
  * et ses données sonores associées. Elle fournit des méthodes pour manipuler les pixels
  * et les fréquences sonores correspondantes.
  */
-public class Image {
+public class ImageMatrice {
 
     /**
      * Représente l'image sous forme de matrice 2D où chaque entier correspond à un pixel (niveaux de gris).
@@ -25,7 +25,7 @@ public class Image {
      *
      * @param image la matrice de l'image à initialiser.
      */
-    public Image(ArrayList<ArrayList<Integer>> image) {
+    public ImageMatrice(ArrayList<ArrayList<Integer>> image) {
         this.image = image;
         this.sound = null;
     }
