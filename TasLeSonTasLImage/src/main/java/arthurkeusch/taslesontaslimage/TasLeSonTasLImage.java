@@ -23,38 +23,12 @@ public class TasLeSonTasLImage extends Application {
 
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
-        // Chemin vers l'image d'entrée
-        String cheminImage = "src/main/images/traits_horizontaux.png";
+        String cheminImage = "src/main/images/color_in_black_v2.png";
 
         try {
-            System.out.println("=== Test : Charger une image ===");
-            Image imageChargee = TraitementImage.chargerImage(cheminImage);
-            System.out.println("Image chargée avec succès !");
-            imageChargee.printImage();
-
-            // Tester la conversion en niveaux de gris
-            System.out.println("\n=== Test : Conversion en niveaux de gris ===");
-            Image imageGris = TraitementImage.convertirEnNiveauxDeGris(cheminImage);
-            System.out.println("Image convertie en niveaux de gris avec succès !");
-            imageGris.printImage();
-
-            // Tester la compression en 64x64
-            System.out.println("\n=== Test : Compression en 64x64 ===");
-            Image imageCompressee = TraitementImage.compresserEn64x64(imageGris);
-            System.out.println("Image compressée à 64x64 pixels avec succès !");
-            imageCompressee.printImage();
-
-            // Tester la génération de son à partir d'une image
-            System.out.println("\n=== Test : Génération de matrice sonore ===");
-            TraitementImage.generateImageSound(imageCompressee);
-            System.out.println("Matrice sonore générée avec succès !");
-            imageCompressee.printSound();
-
-            // Lecture du son généré
-            System.out.println("\n=== Test : Lecture du son ===");
-            CreationAudio.generateAndPlaySound(imageCompressee);
-            System.out.println("Son généré et lu avec succès !");
-
+            TraitementImage traitementImage = new TraitementImage();
+            CreationAudio creationAudio = new CreationAudio(64, 64, 200, 3000, 44100);
+            creationAudio.generateAndPlaySound(traitementImage.traitement(cheminImage));
         } catch (IllegalArgumentException e) {
             System.err.println("Erreur : " + e.getMessage());
         } catch (Exception e) {

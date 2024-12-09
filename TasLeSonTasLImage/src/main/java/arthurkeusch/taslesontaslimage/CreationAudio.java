@@ -2,61 +2,110 @@ package arthurkeusch.taslesontaslimage;
 
 import javax.sound.sampled.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 
+/**
+ * Classe permettant de générer et de jouer un son à partir d'une matrice d'image.
+ */
 public class CreationAudio {
 
-    public static void generateAndPlaySound(Image image) {
-        ArrayList<ArrayList<Double>> soundMatrix = image.getSound();
+    /**
+     * Tableau des valeurs sinus pré-calculées, indexées par ligne et échantillon.
+     */
+    private final double[][] sineTable;
 
-        if (soundMatrix == null || soundMatrix.isEmpty()) {
-            throw new IllegalArgumentException("La matrice sonore est vide ou non définie.");
+    /**
+     * Fréquence d'échantillonnage pour la génération du son (exemple : 44100 Hz).
+     */
+    private final int sampleRate;
+
+    /**
+     * Nombre d'échantillons par frame.
+     */
+    private final int samplesPerFrame;
+
+    /**
+     * Nombre de lignes dans la matrice de l'image.
+     */
+    private final int numRows;
+
+    /**
+     * Nombre de colonnes dans la matrice de l'image.
+     */
+    private final int numCols;
+
+
+    /**
+     * Constructeur qui initialise les paramètres audio, le tableau des fréquences et les valeurs sinus pré-calculées.
+     *
+     * @param numRows      Nombre de lignes dans la matrice sonore (image).
+     * @param numCols      Nombre de colonnes dans la matrice sonore (image).
+     * @param minFrequency Fréquence minimale (en Hz).
+     * @param maxFrequency Fréquence maximale (en Hz).
+     * @param sampleRate   Fréquence d'échantillonnage (exemple : 44100 Hz).
+     */
+    public CreationAudio(int numRows, int numCols, double minFrequency, double maxFrequency, int sampleRate) {
+        this.sampleRate = sampleRate;
+        this.samplesPerFrame = sampleRate / numRows;
+        this.numRows = numRows;
+        this.numCols = numCols;
+        double[] frequencyTable = new double[numRows];
+        sineTable = new double[numRows][samplesPerFrame * numCols];
+
+        for (int row = 0; row < numRows; row++) {
+            frequencyTable[row] = maxFrequency - (row * (maxFrequency - minFrequency) / (numRows - 1));
         }
 
-        // Paramètres du son
-        int sampleRate = 44100; // Fréquence d'échantillonnage standard (44,1 kHz)
-        int samplesPerFrame = sampleRate / 64; // Nombre d'échantillons pour 1/64e de seconde
-        int numFrames = soundMatrix.size();
-        byte[] audioBuffer = new byte[numFrames * samplesPerFrame];
-
-        // Fréquences entre 1000 Hz et 4000 Hz
-        double minFrequency = 1000;
-        double maxFrequency = 4000;
-
-        // Générer le son
-        for (int frame = 0; frame < numFrames; frame++) {
-            ArrayList<Double> amplitudes = soundMatrix.get(frame);
-
-            for (int sample = 0; sample < samplesPerFrame; sample++) {
-                double sampleValue = 0;
-
-                // Combinaison des fréquences et des amplitudes
-                for (int i = 0; i < amplitudes.size(); i++) {
-                    double frequency = minFrequency + (i * (maxFrequency - minFrequency) / amplitudes.size());
-                    double amplitude = amplitudes.get(i); // Utilisation directe des amplitudes brutes
-                    double time = (double) (frame * samplesPerFrame + sample) / sampleRate;
-                    sampleValue += amplitude * Math.sin(2.0 * Math.PI * frequency * time);
+        for (int row = 0; row < numRows; row++) {
+            double frequency = frequencyTable[row];
+            for (int col = 0; col < numCols; col++) {
+                for (int sample = 0; sample < samplesPerFrame; sample++) {
+                    double time = (double) (col * samplesPerFrame + sample) / sampleRate;
+                    sineTable[row][col * samplesPerFrame + sample] = Math.sin(2.0 * Math.PI * frequency * time);
                 }
-
-                // Pas de normalisation immédiate
-                sampleValue = Math.max(-1.0, Math.min(1.0, sampleValue)); // Limiter à [-1, 1]
-                audioBuffer[frame * samplesPerFrame + sample] = (byte) (sampleValue * 127);
             }
         }
 
-        // Configurer le format audio
-        AudioFormat audioFormat = new AudioFormat(sampleRate, 8, 1, true, true);
+        System.out.println("Tableau des fréquences : " + Arrays.toString(frequencyTable));
+    }
+
+    /**
+     * Génère et joue un son à partir d'une matrice sonore représentée sous forme d'image.
+     *
+     * @param image L'image contenant la matrice de l'image sous la forme d'ArrayList<ArrayList<Integer>>.
+     */
+    public void generateAndPlaySound(ImageMatrice image) {
+        ArrayList<ArrayList<Integer>> soundMatrix = image.getImage();
+
+        if (soundMatrix == null || soundMatrix.isEmpty() || soundMatrix.get(0).isEmpty()) {
+            throw new IllegalArgumentException("La matrice sonore est vide ou non définie.");
+        }
+
+        byte[] audioBuffer = new byte[this.numCols * this.samplesPerFrame];
+
+        for (int col = 0; col < this.numCols; col++) {
+            for (int sample = 0; sample < this.samplesPerFrame; sample++) {
+                double sampleValue = 0;
+
+                for (int row = 0; row < this.numRows; row++) {
+                    sampleValue += soundMatrix.get(row).get(col) * sineTable[row][col * this.samplesPerFrame + sample];
+                }
+
+                sampleValue = Math.max(-1.0, Math.min(1.0, sampleValue));
+                audioBuffer[col * this.samplesPerFrame + sample] = (byte) (sampleValue * 127);
+            }
+        }
+
+        AudioFormat audioFormat = new AudioFormat(this.sampleRate, 8, 1, true, true);
         DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
 
         try {
-            // Ouvrir et démarrer la ligne audio
             SourceDataLine line = (SourceDataLine) AudioSystem.getLine(info);
             line.open(audioFormat);
             line.start();
 
-            // Écrire les données audio dans la ligne (lecture du son)
             line.write(audioBuffer, 0, audioBuffer.length);
 
-            // Finir et fermer la ligne audio
             line.drain();
             line.close();
         } catch (LineUnavailableException e) {
