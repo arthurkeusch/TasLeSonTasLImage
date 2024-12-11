@@ -1,96 +1,119 @@
 package arthurkeusch.taslesontaslimage;
 
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
+import javafx.application.Application;
+import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 import org.opencv.core.Core;
 
 import java.io.File;
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class TasLeSonTasLImage extends Application {
 
-    private int currentImageIndex = 0;
-    private int repeatCount = 0;
-    private List<File> imageFiles;
+    /**
+     * Index de l'image actuellement affichée.
+     */
+    private int currentIndex = 0;
 
-    private void startImageSoundCycle(TasLeSonTasLImageController controller) {
-        // Créer un ImageView pour afficher l'image
-        ImageView imageView = controller.getImageView();
+    /**
+     * Liste des fichiers image à traiter.
+     */
+    private List<File> images;
 
-        // Timeline pour gérer le cycle des images
-        Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            if (currentImageIndex < imageFiles.size()) {
-                if (repeatCount < 3) {
-                    // Charger l'image
-                    File currentImageFile = imageFiles.get(currentImageIndex);
-                    Image image = new Image(currentImageFile.toURI().toString());
-                    imageView.setImage(image);
 
-                    // Traiter l'image et générer le son
-                    try {
-                        // Créer un objet TraitementImage et CreationAudio
-                        TraitementImage traitementImage = new TraitementImage();
-                        CreationAudio creationAudio = new CreationAudio(64, 64, 200, 3000, 44100);
-
-                        // Utiliser le chemin de l'image pour traitement
-                        String cheminImage = currentImageFile.getAbsolutePath();
-
-                        // Traitement de l'image
-                        ImageMatrice imageMatrice = traitementImage.traitement(cheminImage);
-                        // Génération et lecture du son
-                        creationAudio.generateAndPlaySound(imageMatrice);
-
-                        // Incrémenter le compteur de répétitions
-                        repeatCount++;
-                    } catch (IllegalArgumentException ex) {
-                        System.err.println("Erreur : " + ex.getMessage());
-                    } catch (Exception ex) {
-                        System.err.println("Une erreur inattendue est survenue : " + ex.getMessage());
-                    }
-                } else {
-                    // Passer à l'image suivante
-                    repeatCount = 0;
-                    currentImageIndex++;
-                }
-            } else {
-                // Toutes les images ont été lues
-                System.out.println("Toutes les images ont été traitées.");
-            }
-        }));
-
-        // Lancer le cycle à une fréquence d'une image toutes les 1 seconde
-        timeline.setCycleCount(Timeline.INDEFINITE);
-        timeline.play();
-    }
-
+    /**
+     * Point d'entrée principal de l'application JavaFX.
+     * Initialise les composants JavaFX et démarre le cycle d'affichage et de traitement des images.
+     *
+     * @param primaryStage La scène principale de l'application.
+     */
     @Override
-    public void start(Stage stage) throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(TasLeSonTasLImage.class.getResource("TasLeSonTasLImage-view.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 800, 600); // Dimension de la fenêtre
-        stage.setTitle("T'as le son ! T'as l'image !");
-        stage.setScene(scene);
-        stage.show();
-
-        // Charger la liste des fichiers images depuis le dossier
-        File folder = new File("src/main/images");
-        imageFiles = List.of(Objects.requireNonNull(folder.listFiles((dir, name) -> name.toLowerCase().endsWith(".png"))));
-
-        // Charger la bibliothèque OpenCV
+    public void start(Stage primaryStage) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
-        // Déclencher le processus de lecture des images et sons
-        startImageSoundCycle(fxmlLoader.getController());
+        File folder = new File("src/main/images");
+        images = getImagesFromFolder(folder);
+
+        if (images.isEmpty()) {
+            System.out.println("Aucune image trouvée dans le dossier !");
+            return;
+        }
+
+        StackPane root = new StackPane();
+        ImageView imageView = new ImageView();
+        imageView.setPreserveRatio(true);
+        imageView.setFitWidth(500);
+        imageView.setFitHeight(500);
+        root.getChildren().add(imageView);
+
+        Scene scene = new Scene(root, 600, 600);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("T'as le son ! T'as l'image !");
+        primaryStage.show();
+
+        TraitementImage traitementImage = new TraitementImage();
+        CreationAudio creationAudio = new CreationAudio(64, 64, 200, 3000, 44100);
+
+        displayNextImage(imageView, traitementImage, creationAudio);
     }
 
+    /**
+     * Récupère tous les fichiers image dans un dossier donné.
+     *
+     * @param folder Le dossier contenant les fichiers image.
+     * @return Une liste des fichiers image trouvés.
+     */
+    private List<File> getImagesFromFolder(File folder) {
+        List<File> imageFiles = new ArrayList<>();
+        if (folder.exists() && folder.isDirectory()) {
+            for (File file : Objects.requireNonNull(folder.listFiles())) {
+                if (file.isFile()) {
+                    imageFiles.add(file);
+                }
+            }
+        }
+        return imageFiles;
+    }
+
+    /**
+     * Affiche l'image suivante dans la vue et génère un son basé sur le traitement de cette image.
+     * Passe automatiquement à l'image suivante une fois le son terminé.
+     *
+     * @param imageView       Le composant d'affichage de l'image.
+     * @param traitementImage L'objet utilisé pour analyser l'image.
+     * @param creationAudio   L'objet utilisé pour générer et jouer le son.
+     */
+    private void displayNextImage(ImageView imageView, TraitementImage traitementImage, CreationAudio creationAudio) {
+        if (currentIndex >= images.size()) {
+            System.out.println("Toutes les images ont été affichées.");
+            return;
+        }
+
+        File imageFile = images.get(currentIndex);
+        Image image = new Image(imageFile.toURI().toString());
+
+        imageView.setImage(image);
+
+        new Thread(() -> {
+            creationAudio.generateAndPlaySound(traitementImage.traitement(imageFile.getAbsolutePath()));
+
+            javafx.application.Platform.runLater(() -> {
+                currentIndex++;
+                displayNextImage(imageView, traitementImage, creationAudio);
+            });
+        }).start();
+    }
+
+    /**
+     * Point d'entrée de l'application.
+     *
+     * @param args Arguments de la ligne de commande (non utilisés).
+     */
     public static void main(String[] args) {
         launch(args);
     }

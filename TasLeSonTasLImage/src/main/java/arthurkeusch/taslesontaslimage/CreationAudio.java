@@ -2,7 +2,6 @@ package arthurkeusch.taslesontaslimage;
 
 import javax.sound.sampled.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 /**
  * Classe permettant de générer et de jouer un son à partir d'une matrice d'image.
@@ -10,74 +9,96 @@ import java.util.Arrays;
 public class CreationAudio {
 
     /**
-     * Tableau des valeurs sinus pré-calculées, indexées par ligne et échantillon.
+     * Table des sinusoïdes pré-générées pour chaque fréquence et chaque échantillon.
      */
-    private final double[][] sineTable;
+    private double[][] sineTable;
 
     /**
-     * Fréquence d'échantillonnage pour la génération du son (exemple : 44100 Hz).
+     * Taux d'échantillonnage audio (en Hz).
      */
     private final int sampleRate;
 
     /**
-     * Nombre d'échantillons par frame.
+     * Nombre d'échantillons par frame audio.
      */
     private final int samplesPerFrame;
 
     /**
-     * Nombre de lignes dans la matrice de l'image.
+     * Nombre de lignes dans la matrice sonore.
      */
     private final int numRows;
 
     /**
-     * Nombre de colonnes dans la matrice de l'image.
+     * Nombre de colonnes dans la matrice sonore.
      */
     private final int numCols;
 
+    /**
+     * Table des fréquences pour chaque ligne.
+     */
+    private double[] frequencyTable;
+
 
     /**
-     * Constructeur qui initialise les paramètres audio, le tableau des fréquences et les valeurs sinus pré-calculées.
+     * Constructeur pour initialiser les paramètres audio et générer les tables de fréquences et de sinusoïdes.
      *
-     * @param numRows      Nombre de lignes dans la matrice sonore (image).
-     * @param numCols      Nombre de colonnes dans la matrice sonore (image).
-     * @param minFrequency Fréquence minimale (en Hz).
-     * @param maxFrequency Fréquence maximale (en Hz).
-     * @param sampleRate   Fréquence d'échantillonnage (exemple : 44100 Hz).
+     * @param numRows      Nombre de lignes dans la matrice sonore.
+     * @param numCols      Nombre de colonnes dans la matrice sonore.
+     * @param minFrequency Fréquence minimale (en Hz) utilisée pour la première ligne.
+     * @param maxFrequency Fréquence maximale (en Hz) utilisée pour la dernière ligne.
+     * @param sampleRate   Taux d'échantillonnage audio (en Hz).
      */
     public CreationAudio(int numRows, int numCols, double minFrequency, double maxFrequency, int sampleRate) {
         this.sampleRate = sampleRate;
         this.samplesPerFrame = sampleRate / numRows;
         this.numRows = numRows;
         this.numCols = numCols;
-        double[] frequencyTable = new double[numRows];
-        sineTable = new double[numRows][samplesPerFrame * numCols];
+        initFrequencyTable(minFrequency, maxFrequency);
+    }
 
+
+    /**
+     * Initialise la table des fréquences pour chaque ligne, en interpolant entre les fréquences minimale et maximale.
+     *
+     * @param minFrequency Fréquence minimale (en Hz) pour la première ligne.
+     * @param maxFrequency Fréquence maximale (en Hz) pour la dernière ligne.
+     */
+    public void initFrequencyTable(double minFrequency, double maxFrequency) {
+        this.frequencyTable = new double[numRows];
         for (int row = 0; row < numRows; row++) {
-            frequencyTable[row] = maxFrequency - (row * (maxFrequency - minFrequency) / (numRows - 1));
+            this.frequencyTable[row] = maxFrequency - (row * (maxFrequency - minFrequency) / (numRows - 1));
         }
+        initSineTable();
+    }
 
+
+    /**
+     * Pré-génère une table de sinusoïdes pour chaque fréquence, échantillon et colonne.
+     */
+    public void initSineTable() {
+        this.sineTable = new double[numRows][samplesPerFrame * numCols];
         for (int row = 0; row < numRows; row++) {
-            double frequency = frequencyTable[row];
+            double frequency = this.frequencyTable[row];
             for (int col = 0; col < numCols; col++) {
                 for (int sample = 0; sample < samplesPerFrame; sample++) {
                     double time = (double) (col * samplesPerFrame + sample) / sampleRate;
-                    sineTable[row][col * samplesPerFrame + sample] = Math.sin(2.0 * Math.PI * frequency * time);
+                    this.sineTable[row][col * samplesPerFrame + sample] = Math.sin(2.0 * Math.PI * frequency * time);
                 }
             }
         }
-
-        System.out.println("Tableau des fréquences : " + Arrays.toString(frequencyTable));
     }
 
     /**
-     * Génère et joue un son à partir d'une matrice sonore représentée sous forme d'image.
+     * Génère et joue un son basé sur une matrice d'images.
+     * Chaque pixel de la matrice contrôle l'amplitude de la fréquence correspondante.
      *
-     * @param image L'image contenant la matrice de l'image sous la forme d'ArrayList<ArrayList<Integer>>.
+     * @param image Matrice d'images contenant des valeurs (amplitudes) pour chaque pixel.
+     * @throws IllegalArgumentException Si la matrice est vide ou nulle.
      */
     public void generateAndPlaySound(ImageMatrice image) {
         ArrayList<ArrayList<Integer>> soundMatrix = image.getImage();
 
-        if (soundMatrix == null || soundMatrix.isEmpty() || soundMatrix.get(0).isEmpty()) {
+        if (soundMatrix == null || soundMatrix.isEmpty() || soundMatrix.getFirst().isEmpty()) {
             throw new IllegalArgumentException("La matrice sonore est vide ou non définie.");
         }
 
