@@ -1,6 +1,8 @@
 package arthurkeusch.taslesontaslimage;
 
 import javax.sound.sampled.*;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -89,6 +91,40 @@ public class CreationAudio {
     }
 
     /**
+     * Joue un fichier audio spécifié par son chemin.
+     * Cette méthode prend en charge les formats compatibles avec l'API javax.sound.sampled, tels que WAV.
+     *
+     * @param filePath Chemin vers le fichier audio à jouer.
+     * @throws IllegalArgumentException Si le fichier est introuvable ou si son format n'est pas pris en charge.
+     * @throws RuntimeException         En cas d'erreurs liées à l'entrée/sortie ou au système audio lors de la lecture.
+     */
+    public void playAudioFile(String filePath) {
+        try {
+            File audioFile = new File(filePath);
+            AudioInputStream audioStream = AudioSystem.getAudioInputStream(audioFile);
+            AudioFormat format = audioStream.getFormat();
+            DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+            SourceDataLine audioLine = (SourceDataLine) AudioSystem.getLine(info);
+
+            audioLine.open(format);
+            audioLine.start();
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+
+            while ((bytesRead = audioStream.read(buffer)) != -1) {
+                audioLine.write(buffer, 0, bytesRead);
+            }
+
+            audioLine.drain();
+            audioLine.close();
+            audioStream.close();
+        } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Génère et joue un son basé sur une matrice d'images.
      * Chaque pixel de la matrice contrôle l'amplitude de la fréquence correspondante.
      *
@@ -132,5 +168,6 @@ public class CreationAudio {
         } catch (LineUnavailableException e) {
             e.printStackTrace();
         }
+        playAudioFile("src/main/sound/bipboup.wav");
     }
 }
