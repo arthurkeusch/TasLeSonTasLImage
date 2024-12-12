@@ -2,6 +2,7 @@ package arthurkeusch.taslesontaslimage;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -15,6 +16,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Classe principale permettant de lire des images ou des images extraites d'une vidéo.
+ */
 public class TasLeSonTasLImage extends Application {
 
     /**
@@ -38,6 +42,11 @@ public class TasLeSonTasLImage extends Application {
     private final TraitementImage traitementImage = new TraitementImage();
 
     /**
+     * Instance de {@link TraitementVideo} pour traiter les vidéos.
+     */
+    private final TraitementVideo traitementVideo = new TraitementVideo();
+
+    /**
      * Flag pour indiquer si le son est en cours de lecture ou en pause.
      */
     private boolean isPlaying = true;
@@ -57,6 +66,30 @@ public class TasLeSonTasLImage extends Application {
     public void start(Stage primaryStage) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
+        VBox root = new VBox();
+        root.setSpacing(10);
+        root.setStyle("-fx-alignment: center;");
+
+        Button imageButton = new Button("Images");
+        Button videoButton = new Button("Vidéo");
+
+        root.getChildren().addAll(imageButton, videoButton);
+
+        Scene scene = new Scene(root, 600, 600);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("T'as le son ! T'as l'image !");
+        primaryStage.show();
+
+        imageButton.setOnAction(event -> startImageMode(scene));
+        videoButton.setOnAction(event -> startVideoMode(scene));
+    }
+
+    /**
+     * Démarre le mode lecture d'images.
+     *
+     * @param scene La scène actuelle à mettre à jour.
+     */
+    private void startImageMode(Scene scene) {
         File folder = new File("src/main/images");
         images = getImagesFromFolder(folder);
 
@@ -65,6 +98,41 @@ public class TasLeSonTasLImage extends Application {
             return;
         }
 
+        setupPlaybackScene(scene);
+    }
+
+    /**
+     * Démarre le mode lecture de vidéo.
+     *
+     * @param scene La scène actuelle à mettre à jour.
+     */
+    private void startVideoMode(Scene scene) {
+        String videoPath = "src/main/videos/mavideo.mp4";
+
+        // Effectuer le traitement vidéo dans un thread séparé
+        new Thread(() -> {
+            traitementVideo.traitementVideo(videoPath);
+
+            // Une fois le traitement terminé, charger les images extraites
+            File folder = new File("src/main/imagesVideo");
+            images = getImagesFromFolder(folder);
+
+            if (images.isEmpty()) {
+                System.out.println("Aucune image extraite de la vidéo !");
+                return;
+            }
+
+            // Mettre à jour l'interface utilisateur pour la lecture des images
+            javafx.application.Platform.runLater(() -> setupPlaybackScene(scene));
+        }).start();
+    }
+
+    /**
+     * Configure la scène pour la lecture des images.
+     *
+     * @param scene La scène actuelle à mettre à jour.
+     */
+    private void setupPlaybackScene(Scene scene) {
         StackPane root = new StackPane();
         ImageView imageView = new ImageView();
         imageView.setPreserveRatio(true);
@@ -78,12 +146,9 @@ public class TasLeSonTasLImage extends Application {
         layout.setStyle("-fx-alignment: top-center;");
         layout.getChildren().addAll(instructions, root);
 
-        Scene scene = new Scene(layout, 600, 600);
-        primaryStage.setScene(scene);
-        primaryStage.setTitle("T'as le son ! T'as l'image !");
-        primaryStage.show();
-
+        scene.setRoot(layout);
         root.getChildren().add(imageView);
+
         playAllImages(imageView);
 
         scene.setOnKeyPressed(event -> {
