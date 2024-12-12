@@ -40,7 +40,6 @@ public class CreationAudio {
      */
     private double[] frequencyTable;
 
-
     /**
      * Constructeur pour initialiser les paramètres audio et générer les tables de fréquences et de sinusoïdes.
      *
@@ -58,7 +57,6 @@ public class CreationAudio {
         initFrequencyTable(minFrequency, maxFrequency);
     }
 
-
     /**
      * Initialise la table des fréquences pour chaque ligne, en interpolant entre les fréquences minimale et maximale.
      *
@@ -72,7 +70,6 @@ public class CreationAudio {
         }
         initSineTable();
     }
-
 
     /**
      * Pré-génère une table de sinusoïdes pour chaque fréquence, échantillon et colonne.
@@ -125,6 +122,13 @@ public class CreationAudio {
     }
 
     /**
+     * Joue un son de notification prédéfini "bip boup".
+     */
+    public void playBipBoup() {
+        playAudioFile("src/main/sound/bipboup.wav");
+    }
+
+    /**
      * Génère et joue un son basé sur une matrice d'images.
      * Chaque pixel de la matrice contrôle l'amplitude de la fréquence correspondante.
      *
@@ -161,13 +165,16 @@ public class CreationAudio {
             line.open(audioFormat);
             line.start();
 
-            line.write(audioBuffer, 0, audioBuffer.length);
+            for (int i = 0; i < audioBuffer.length; i += 1024) {
+                int length = Math.min(1024, audioBuffer.length - i);
+                line.write(audioBuffer, i, length);
+            }
 
             line.drain();
             line.close();
         } catch (LineUnavailableException e) {
             e.printStackTrace();
         }
-        playAudioFile("src/main/sound/bipboup.wav");
+        playBipBoup();
     }
 }

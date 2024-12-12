@@ -2,9 +2,11 @@ package arthurkeusch.taslesontaslimage;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.opencv.core.Core;
 
@@ -25,6 +27,25 @@ public class TasLeSonTasLImage extends Application {
      */
     private List<File> images;
 
+    /**
+     * Instance de {@link CreationAudio} pour gérer la lecture sonore.
+     */
+    private final CreationAudio creationAudio = new CreationAudio(64, 64, 200, 3000, 44100);
+
+    /**
+     * Instance de {@link TraitementImage} pour analyser et traiter les images.
+     */
+    private final TraitementImage traitementImage = new TraitementImage();
+
+    /**
+     * Flag pour indiquer si le son est en cours de lecture ou en pause.
+     */
+    private boolean isPlaying = true;
+
+    /**
+     * Objet pour synchroniser les threads et gérer les pauses.
+     */
+    private final Object pauseLock = new Object();
 
     /**
      * Point d'entrée principal de l'application JavaFX.
@@ -49,17 +70,85 @@ public class TasLeSonTasLImage extends Application {
         imageView.setPreserveRatio(true);
         imageView.setFitWidth(500);
         imageView.setFitHeight(500);
-        root.getChildren().add(imageView);
 
-        Scene scene = new Scene(root, 600, 600);
+        Label instructions = new Label("<--: Précédent | ␣: Pause | -->: Suivant");
+        instructions.setStyle("-fx-font-size: 14px; -fx-text-fill: black;");
+
+        VBox layout = new VBox();
+        layout.setStyle("-fx-alignment: top-center;");
+        layout.getChildren().addAll(instructions, root);
+
+        Scene scene = new Scene(layout, 600, 600);
         primaryStage.setScene(scene);
         primaryStage.setTitle("T'as le son ! T'as l'image !");
         primaryStage.show();
 
-        TraitementImage traitementImage = new TraitementImage();
-        CreationAudio creationAudio = new CreationAudio(64, 64, 200, 3000, 44100);
+        root.getChildren().add(imageView);
+        playAllImages(imageView);
 
-        displayNextImage(imageView, traitementImage, creationAudio);
+        scene.setOnKeyPressed(event -> {
+            synchronized (pauseLock) {
+                switch (event.getCode()) {
+                    case RIGHT -> {
+                        currentIndex = (currentIndex + 1) % images.size();
+                        updateImage(imageView);
+                        pauseLock.notifyAll();
+                    }
+                    case LEFT -> {
+                        currentIndex = (currentIndex - 1 + images.size()) % images.size();
+                        updateImage(imageView);
+                        pauseLock.notifyAll();
+                    }
+                    case SPACE -> {
+                        isPlaying = !isPlaying;
+                        if (isPlaying) {
+                            pauseLock.notifyAll();
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * Joue toutes les images en boucle tant que {@code isPlaying} est vrai.
+     * Lorsque la lecture est en pause, le thread est mis en attente.
+     *
+     * @param imageView Le composant d'affichage de l'image.
+     */
+    private void playAllImages(ImageView imageView) {
+        new Thread(() -> {
+            while (true) {
+                synchronized (pauseLock) {
+                    while (!isPlaying) {
+                        try {
+                            pauseLock.wait();
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                    }
+                }
+
+                File imageFile = images.get(currentIndex);
+                Image image = new Image(imageFile.toURI().toString());
+
+                javafx.application.Platform.runLater(() -> imageView.setImage(image));
+
+                creationAudio.generateAndPlaySound(traitementImage.traitement(imageFile.getAbsolutePath()));
+            }
+        }).start();
+    }
+
+    /**
+     * Met à jour l'image affichée sans jouer le son.
+     *
+     * @param imageView Le composant d'affichage de l'image.
+     */
+    private void updateImage(ImageView imageView) {
+        File imageFile = images.get(currentIndex);
+        Image image = new Image(imageFile.toURI().toString());
+        javafx.application.Platform.runLater(() -> imageView.setImage(image));
     }
 
     /**
@@ -81,36 +170,7 @@ public class TasLeSonTasLImage extends Application {
     }
 
     /**
-     * Affiche l'image suivante dans la vue et génère un son basé sur le traitement de cette image.
-     * Passe automatiquement à l'image suivante une fois le son terminé.
-     *
-     * @param imageView       Le composant d'affichage de l'image.
-     * @param traitementImage L'objet utilisé pour analyser l'image.
-     * @param creationAudio   L'objet utilisé pour générer et jouer le son.
-     */
-    private void displayNextImage(ImageView imageView, TraitementImage traitementImage, CreationAudio creationAudio) {
-        if (currentIndex >= images.size()) {
-            System.out.println("Toutes les images ont été affichées.");
-            return;
-        }
-
-        File imageFile = images.get(currentIndex);
-        Image image = new Image(imageFile.toURI().toString());
-
-        imageView.setImage(image);
-
-        new Thread(() -> {
-            creationAudio.generateAndPlaySound(traitementImage.traitement(imageFile.getAbsolutePath()));
-
-            javafx.application.Platform.runLater(() -> {
-                currentIndex++;
-                displayNextImage(imageView, traitementImage, creationAudio);
-            });
-        }).start();
-    }
-
-    /**
-     * Point d'entrée de l'application.
+     * Méthode principale permettant de lancer l'application.
      *
      * @param args Arguments de la ligne de commande (non utilisés).
      */
