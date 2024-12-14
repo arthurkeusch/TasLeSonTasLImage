@@ -171,7 +171,6 @@ public class TasLeSonTasLImage extends Application {
      * @param primaryStage La fenêtre principale pour revenir au menu principal.
      */
     private void setupPlaybackScene(Scene scene, Stage primaryStage) {
-        // Arrête toute lecture en cours pour éviter les superpositions
         stopPlayback();
 
         StackPane root = new StackPane();
@@ -197,14 +196,11 @@ public class TasLeSonTasLImage extends Application {
         scene.setRoot(layout);
         root.getChildren().add(imageView);
 
-        // Réinitialise les paramètres de lecture
         currentIndex = 0;
         isPlaying = true;
 
-        // Met à jour et affiche la première image
         updateImage(imageView);
 
-        // Démarre la lecture
         playAllImages(imageView, scene);
 
         scene.setOnKeyPressed(event -> {
@@ -250,7 +246,6 @@ public class TasLeSonTasLImage extends Application {
 
                     File imageFile = images.get(currentIndex);
 
-                    // Vérifie que l'image est valide
                     if (!imageFile.exists() || !imageFile.canRead() || containsSpecialCharacters(imageFile.getName())) {
                         String errorMessage = "Erreur : Impossible de lire le fichier. Le nom contient des caractères spéciaux non supportés : " + imageFile.getName();
                         System.out.println(errorMessage);
@@ -258,13 +253,11 @@ public class TasLeSonTasLImage extends Application {
                             new ErrorDialogView("Erreur", errorMessage).show();
                             resetToMainMenu(scene);
                         });
-                        break; // Stop le processus immédiatement
+                        break;
                     }
 
-                    // Affiche l'image actuelle
                     javafx.application.Platform.runLater(() -> imageView.setImage(new Image(imageFile.toURI().toString())));
 
-                    // Lecture synchrone du son uniquement si l'image courante n'a pas changé
                     synchronized (creationAudio) {
                         if (images.get(currentIndex).equals(imageFile)) {
                             creationAudio.generateAndPlaySound(traitementImage.traitement(imageFile.getAbsolutePath()));
@@ -326,27 +319,6 @@ public class TasLeSonTasLImage extends Application {
     }
 
     /**
-     * Affiche un message d'erreur dans la vue.
-     *
-     * @param errorMessage Le message d'erreur à afficher.
-     */
-    private void showErrorDialog(String errorMessage) {
-        Stage errorStage = new Stage();
-        VBox root = new VBox();
-        root.setStyle("-fx-padding: 10; -fx-alignment: center;");
-        Label errorLabel = new Label(errorMessage);
-        errorLabel.setWrapText(true);
-        errorLabel.setStyle("-fx-text-fill: red; -fx-font-size: 14px;");
-        Button closeButton = new Button("Fermer");
-        closeButton.setOnAction(e -> errorStage.close());
-        root.getChildren().addAll(errorLabel, closeButton);
-        Scene scene = new Scene(root, 400, 200);
-        errorStage.setScene(scene);
-        errorStage.setTitle("Erreur");
-        errorStage.show();
-    }
-
-    /**
      * Met à jour l'image affichée sans jouer le son.
      *
      * @param imageView Le composant d'affichage de l'image.
@@ -391,7 +363,7 @@ public class TasLeSonTasLImage extends Application {
             long parsedNumber = Long.parseLong(number);
             if (parsedNumber > Integer.MAX_VALUE) {
                 System.out.println("Nombre trop grand pour int, utilisation de la valeur maximale.");
-                return Integer.MAX_VALUE; // ou une autre gestion selon votre besoin
+                return Integer.MAX_VALUE;
             }
             return (int) parsedNumber;
         } catch (NumberFormatException e) {
