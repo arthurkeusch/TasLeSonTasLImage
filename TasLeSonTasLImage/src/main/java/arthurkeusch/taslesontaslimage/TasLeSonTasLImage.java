@@ -1,8 +1,8 @@
 package arthurkeusch.taslesontaslimage;
 
 import arthurkeusch.taslesontaslimage.views.ErrorDialogView;
+import arthurkeusch.taslesontaslimage.views.SelectionView;
 import javafx.application.Application;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
@@ -76,33 +76,22 @@ public class TasLeSonTasLImage extends Application {
     public void start(Stage primaryStage) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
-        VBox root = new VBox();
-        root.setSpacing(10);
-        root.setStyle("-fx-alignment: center;");
+        SelectionView selectionView = new SelectionView(
+                () -> startImageMode(primaryStage),
+                () -> startVideoMode(primaryStage)
+        );
 
-        Button imageButton = new Button("Images");
-        imageButton.setFocusTraversable(false);
-        Button videoButton = new Button("Vidéo");
-        videoButton.setFocusTraversable(false);
-
-        root.getChildren().addAll(imageButton, videoButton);
-
-        Scene scene = new Scene(root, 600, 600);
-        primaryStage.setScene(scene);
+        primaryStage.setScene(selectionView.getScene());
         primaryStage.setTitle("T'as le son ! T'as l'image !");
         primaryStage.show();
-
-        imageButton.setOnAction(event -> startImageMode(primaryStage, scene));
-        videoButton.setOnAction(event -> startVideoMode(primaryStage, scene));
     }
 
     /**
      * Démarre le mode lecture d'images.
      *
      * @param primaryStage La fenêtre principale utilisée pour afficher les dialogues de sélection.
-     * @param scene        La scène actuelle à mettre à jour.
      */
-    private void startImageMode(Stage primaryStage, Scene scene) {
+    private void startImageMode(Stage primaryStage) {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("Sélectionnez un dossier contenant des images");
         directoryChooser.setInitialDirectory(new File(System.getProperty("user.dir")));
@@ -116,7 +105,7 @@ public class TasLeSonTasLImage extends Application {
                 return;
             }
 
-            setupPlaybackScene(scene, primaryStage);
+            setupPlaybackScene(primaryStage);
         } else {
             System.out.println("Dossier invalide ou non sélectionné !");
         }
@@ -126,9 +115,8 @@ public class TasLeSonTasLImage extends Application {
      * Démarre le mode lecture de vidéo.
      *
      * @param primaryStage La fenêtre principale utilisée pour afficher les dialogues de sélection.
-     * @param scene        La scène actuelle à mettre à jour.
      */
-    private void startVideoMode(Stage primaryStage, Scene scene) {
+    private void startVideoMode(Stage primaryStage) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Sélectionnez une vidéo");
         fileChooser.setInitialDirectory(new File(System.getProperty("user.dir")));
@@ -141,7 +129,7 @@ public class TasLeSonTasLImage extends Application {
                 System.out.println(errorMessage);
                 javafx.application.Platform.runLater(() -> {
                     new ErrorDialogView("Erreur", errorMessage).show();
-                    resetToMainMenu(scene);
+                    resetToMainMenu(primaryStage);
                 });
                 return;
             }
@@ -157,7 +145,7 @@ public class TasLeSonTasLImage extends Application {
                     return;
                 }
 
-                javafx.application.Platform.runLater(() -> setupPlaybackScene(scene, primaryStage));
+                javafx.application.Platform.runLater(() -> setupPlaybackScene(primaryStage));
             }).start();
         } else {
             System.out.println("Fichier vidéo invalide ou non sélectionné !");
@@ -167,10 +155,9 @@ public class TasLeSonTasLImage extends Application {
     /**
      * Configure la scène pour la lecture des images.
      *
-     * @param scene        La scène actuelle à mettre à jour.
      * @param primaryStage La fenêtre principale pour revenir au menu principal.
      */
-    private void setupPlaybackScene(Scene scene, Stage primaryStage) {
+    private void setupPlaybackScene(Stage primaryStage) {
         stopPlayback();
 
         StackPane root = new StackPane();
@@ -186,14 +173,14 @@ public class TasLeSonTasLImage extends Application {
         backButton.setFocusTraversable(false);
         backButton.setOnAction(event -> {
             stopPlayback();
-            resetToMainMenu(scene);
+            resetToMainMenu(primaryStage);
         });
 
         VBox layout = new VBox();
         layout.setStyle("-fx-alignment: top-center;");
         layout.getChildren().addAll(backButton, instructions, root);
 
-        scene.setRoot(layout);
+        primaryStage.getScene().setRoot(layout);
         root.getChildren().add(imageView);
 
         currentIndex = 0;
@@ -201,9 +188,9 @@ public class TasLeSonTasLImage extends Application {
 
         updateImage(imageView);
 
-        playAllImages(imageView, scene);
+        playAllImages(imageView, primaryStage);
 
-        scene.setOnKeyPressed(event -> {
+        primaryStage.getScene().setOnKeyPressed(event -> {
             synchronized (pauseLock) {
                 switch (event.getCode()) {
                     case RIGHT -> {
@@ -231,10 +218,10 @@ public class TasLeSonTasLImage extends Application {
      * Joue toutes les images en boucle tant que {@code isPlaying} est vrai.
      * Lorsque la lecture est en pause, le thread est mis en attente.
      *
-     * @param imageView Le composant d'affichage de l'image.
-     * @param scene     La scène actuelle pour revenir au menu principal en cas d'erreur.
+     * @param imageView    Le composant d'affichage de l'image.
+     * @param primaryStage La scène actuelle pour revenir au menu principal en cas d'erreur.
      */
-    private void playAllImages(ImageView imageView, Scene scene) {
+    private void playAllImages(ImageView imageView, Stage primaryStage) {
         playbackThread = new Thread(() -> {
             try {
                 while (true) {
@@ -251,7 +238,7 @@ public class TasLeSonTasLImage extends Application {
                         System.out.println(errorMessage);
                         javafx.application.Platform.runLater(() -> {
                             new ErrorDialogView("Erreur", errorMessage).show();
-                            resetToMainMenu(scene);
+                            resetToMainMenu(primaryStage);
                         });
                         break;
                     }
@@ -288,24 +275,15 @@ public class TasLeSonTasLImage extends Application {
     /**
      * Réinitialise la scène au menu principal.
      *
-     * @param scene La scène à réinitialiser.
+     * @param primaryStage La fenêtre principale de l'application.
      */
-    private void resetToMainMenu(Scene scene) {
-        VBox root = new VBox();
-        root.setSpacing(10);
-        root.setStyle("-fx-alignment: center;");
+    private void resetToMainMenu(Stage primaryStage) {
+        SelectionView selectionView = new SelectionView(
+                () -> startImageMode(primaryStage),
+                () -> startVideoMode(primaryStage)
+        );
 
-        Button imageButton = new Button("Images");
-        imageButton.setFocusTraversable(false);
-        Button videoButton = new Button("Vidéo");
-        videoButton.setFocusTraversable(false);
-
-        root.getChildren().addAll(imageButton, videoButton);
-
-        imageButton.setOnAction(event -> startImageMode((Stage) scene.getWindow(), scene));
-        videoButton.setOnAction(event -> startVideoMode((Stage) scene.getWindow(), scene));
-
-        scene.setRoot(root);
+        primaryStage.setScene(selectionView.getScene());
     }
 
     /**
