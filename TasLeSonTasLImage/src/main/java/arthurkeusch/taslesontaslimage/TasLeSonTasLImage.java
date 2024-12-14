@@ -8,6 +8,8 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.opencv.core.Core;
 
@@ -80,51 +82,66 @@ public class TasLeSonTasLImage extends Application {
         primaryStage.setTitle("T'as le son ! T'as l'image !");
         primaryStage.show();
 
-        imageButton.setOnAction(event -> startImageMode(scene));
-        videoButton.setOnAction(event -> startVideoMode(scene));
+        imageButton.setOnAction(event -> startImageMode(primaryStage, scene));
+        videoButton.setOnAction(event -> startVideoMode(primaryStage, scene));
     }
 
     /**
      * Démarre le mode lecture d'images.
      *
-     * @param scene La scène actuelle à mettre à jour.
+     * @param primaryStage La fenêtre principale utilisée pour afficher les dialogues de sélection.
+     * @param scene        La scène actuelle à mettre à jour.
      */
-    private void startImageMode(Scene scene) {
-        File folder = new File("src/main/images");
-        images = getImagesFromFolder(folder);
+    private void startImageMode(Stage primaryStage, Scene scene) {
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        directoryChooser.setTitle("Sélectionnez un dossier contenant des images");
+        directoryChooser.setInitialDirectory(new File(System.getProperty("user.dir")));
+        File folder = directoryChooser.showDialog(primaryStage);
 
-        if (images.isEmpty()) {
-            System.out.println("Aucune image trouvée dans le dossier !");
-            return;
+        if (folder != null && folder.isDirectory()) {
+            images = getImagesFromFolder(folder);
+
+            if (images.isEmpty()) {
+                System.out.println("Aucune image trouvée dans le dossier sélectionné !");
+                return;
+            }
+
+            setupPlaybackScene(scene);
+        } else {
+            System.out.println("Dossier invalide ou non sélectionné !");
         }
-
-        setupPlaybackScene(scene);
     }
 
     /**
      * Démarre le mode lecture de vidéo.
      *
-     * @param scene La scène actuelle à mettre à jour.
+     * @param primaryStage La fenêtre principale utilisée pour afficher les dialogues de sélection.
+     * @param scene        La scène actuelle à mettre à jour.
      */
-    private void startVideoMode(Scene scene) {
-        String videoPath = "src/main/videos/mavideo.mp4";
+    private void startVideoMode(Stage primaryStage, Scene scene) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Sélectionnez une vidéo");
+        fileChooser.setInitialDirectory(new File(System.getProperty("user.dir")));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Fichiers vidéo", "*.mp4", "*.avi", "*.mkv"));
+        File videoFile = fileChooser.showOpenDialog(primaryStage);
 
-        // Effectuer le traitement vidéo dans un thread séparé
-        new Thread(() -> {
-            traitementVideo.traitementVideo(videoPath);
+        if (videoFile != null && videoFile.isFile()) {
+            new Thread(() -> {
+                traitementVideo.traitementVideo(videoFile.getAbsolutePath());
 
-            // Une fois le traitement terminé, charger les images extraites
-            File folder = new File("src/main/imagesVideo");
-            images = getImagesFromFolder(folder);
+                File folder = new File("src/main/imagesVideo");
+                images = getImagesFromFolder(folder);
 
-            if (images.isEmpty()) {
-                System.out.println("Aucune image extraite de la vidéo !");
-                return;
-            }
+                if (images.isEmpty()) {
+                    System.out.println("Aucune image extraite de la vidéo sélectionnée !");
+                    return;
+                }
 
-            // Mettre à jour l'interface utilisateur pour la lecture des images
-            javafx.application.Platform.runLater(() -> setupPlaybackScene(scene));
-        }).start();
+                javafx.application.Platform.runLater(() -> setupPlaybackScene(scene));
+            }).start();
+        } else {
+            System.out.println("Fichier vidéo invalide ou non sélectionné !");
+        }
     }
 
     /**
@@ -226,7 +243,7 @@ public class TasLeSonTasLImage extends Application {
         List<File> imageFiles = new ArrayList<>();
         if (folder.exists() && folder.isDirectory()) {
             for (File file : Objects.requireNonNull(folder.listFiles())) {
-                if (file.isFile()) {
+                if (file.isFile() && (file.getName().endsWith(".png") || file.getName().endsWith(".jpg") || file.getName().endsWith(".jpeg"))) {
                     imageFiles.add(file);
                 }
             }
