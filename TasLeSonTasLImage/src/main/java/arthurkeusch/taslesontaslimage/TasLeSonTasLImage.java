@@ -14,7 +14,9 @@ import javafx.stage.Stage;
 import org.opencv.core.Core;
 
 import java.io.File;
+import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -59,6 +61,11 @@ public class TasLeSonTasLImage extends Application {
     private final Object pauseLock = new Object();
 
     /**
+     * Thread de lecture en cours.
+     */
+    private Thread playbackThread;
+
+    /**
      * Point d'entrée principal de l'application JavaFX.
      * Initialise les composants JavaFX et démarre le cycle d'affichage et de traitement des images.
      *
@@ -73,7 +80,9 @@ public class TasLeSonTasLImage extends Application {
         root.setStyle("-fx-alignment: center;");
 
         Button imageButton = new Button("Images");
+        imageButton.setFocusTraversable(false);
         Button videoButton = new Button("Vidéo");
+        videoButton.setFocusTraversable(false);
 
         root.getChildren().addAll(imageButton, videoButton);
 
@@ -106,7 +115,7 @@ public class TasLeSonTasLImage extends Application {
                 return;
             }
 
-            setupPlaybackScene(scene);
+            setupPlaybackScene(scene, primaryStage);
         } else {
             System.out.println("Dossier invalide ou non sélectionné !");
         }
@@ -126,6 +135,16 @@ public class TasLeSonTasLImage extends Application {
         File videoFile = fileChooser.showOpenDialog(primaryStage);
 
         if (videoFile != null && videoFile.isFile()) {
+            if (containsSpecialCharacters(videoFile.getName())) {
+                String errorMessage = "Erreur : Impossible de lire la vidéo. Le nom contient des caractères spéciaux non supportés : " + videoFile.getName();
+                System.out.println(errorMessage);
+                javafx.application.Platform.runLater(() -> {
+                    showErrorDialog(errorMessage);
+                    resetToMainMenu(scene);
+                });
+                return;
+            }
+
             new Thread(() -> {
                 traitementVideo.traitementVideo(videoFile.getAbsolutePath());
 
@@ -137,7 +156,7 @@ public class TasLeSonTasLImage extends Application {
                     return;
                 }
 
-                javafx.application.Platform.runLater(() -> setupPlaybackScene(scene));
+                javafx.application.Platform.runLater(() -> setupPlaybackScene(scene, primaryStage));
             }).start();
         } else {
             System.out.println("Fichier vidéo invalide ou non sélectionné !");
@@ -148,8 +167,9 @@ public class TasLeSonTasLImage extends Application {
      * Configure la scène pour la lecture des images.
      *
      * @param scene La scène actuelle à mettre à jour.
+     * @param primaryStage La fenêtre principale pour revenir au menu principal.
      */
-    private void setupPlaybackScene(Scene scene) {
+    private void setupPlaybackScene(Scene scene, Stage primaryStage) {
         StackPane root = new StackPane();
         ImageView imageView = new ImageView();
         imageView.setPreserveRatio(true);
@@ -159,14 +179,21 @@ public class TasLeSonTasLImage extends Application {
         Label instructions = new Label("<--: Précédent | ␣: Pause | -->: Suivant");
         instructions.setStyle("-fx-font-size: 14px; -fx-text-fill: black;");
 
+        Button backButton = new Button("Retour");
+        backButton.setFocusTraversable(false);
+        backButton.setOnAction(event -> {
+            stopPlayback();
+            resetToMainMenu(scene);
+        });
+
         VBox layout = new VBox();
         layout.setStyle("-fx-alignment: top-center;");
-        layout.getChildren().addAll(instructions, root);
+        layout.getChildren().addAll(backButton, instructions, root);
 
         scene.setRoot(layout);
         root.getChildren().add(imageView);
 
-        playAllImages(imageView);
+        playAllImages(imageView, scene);
 
         scene.setOnKeyPressed(event -> {
             synchronized (pauseLock) {
@@ -197,29 +224,107 @@ public class TasLeSonTasLImage extends Application {
      * Lorsque la lecture est en pause, le thread est mis en attente.
      *
      * @param imageView Le composant d'affichage de l'image.
+     * @param scene La scène actuelle pour revenir au menu principal en cas d'erreur.
      */
-    private void playAllImages(ImageView imageView) {
-        new Thread(() -> {
-            while (true) {
-                synchronized (pauseLock) {
-                    while (!isPlaying) {
-                        try {
+    private void playAllImages(ImageView imageView, Scene scene) {
+        playbackThread = new Thread(() -> {
+            try {
+                while (true) {
+                    synchronized (pauseLock) {
+                        while (!isPlaying) {
                             pauseLock.wait();
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            return;
                         }
                     }
+
+                    File imageFile = images.get(currentIndex);
+                    if (!imageFile.exists() || !imageFile.canRead() || containsSpecialCharacters(imageFile.getName())) {
+                        String errorMessage = "Erreur : Impossible de lire le fichier. Le nom contient des caractères spéciaux non supportés : " + imageFile.getName();
+                        System.out.println(errorMessage);
+                        javafx.application.Platform.runLater(() -> {
+                            showErrorDialog(errorMessage);
+                            resetToMainMenu(scene);
+                        });
+                        break; // Stop the process immediately
+                    }
+
+                    Image image = new Image(imageFile.toURI().toString());
+
+                    javafx.application.Platform.runLater(() -> imageView.setImage(image));
+
+                    creationAudio.generateAndPlaySound(traitementImage.traitement(imageFile.getAbsolutePath()));
                 }
-
-                File imageFile = images.get(currentIndex);
-                Image image = new Image(imageFile.toURI().toString());
-
-                javafx.application.Platform.runLater(() -> imageView.setImage(image));
-
-                creationAudio.generateAndPlaySound(traitementImage.traitement(imageFile.getAbsolutePath()));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
-        }).start();
+        });
+        playbackThread.start();
+    }
+
+    /**
+     * Arrête la lecture en cours.
+     */
+    private void stopPlayback() {
+        if (playbackThread != null && playbackThread.isAlive()) {
+            playbackThread.interrupt();
+        }
+        synchronized (pauseLock) {
+            isPlaying = false;
+            pauseLock.notifyAll();
+        }
+    }
+
+    /**
+     * Réinitialise la scène au menu principal.
+     *
+     * @param scene La scène à réinitialiser.
+     */
+    private void resetToMainMenu(Scene scene) {
+        VBox root = new VBox();
+        root.setSpacing(10);
+        root.setStyle("-fx-alignment: center;");
+
+        Button imageButton = new Button("Images");
+        imageButton.setFocusTraversable(false);
+        Button videoButton = new Button("Vidéo");
+        videoButton.setFocusTraversable(false);
+
+        root.getChildren().addAll(imageButton, videoButton);
+
+        imageButton.setOnAction(event -> startImageMode((Stage) scene.getWindow(), scene));
+        videoButton.setOnAction(event -> startVideoMode((Stage) scene.getWindow(), scene));
+
+        scene.setRoot(root);
+    }
+
+    /**
+     * Vérifie si un nom de fichier contient des caractères spéciaux non supportés.
+     *
+     * @param fileName Le nom du fichier à vérifier.
+     * @return true si le nom contient des caractères spéciaux, false sinon.
+     */
+    private boolean containsSpecialCharacters(String fileName) {
+        return !Normalizer.normalize(fileName, Normalizer.Form.NFD).replaceAll("\\p{M}", "").matches("[a-zA-Z0-9._-]+");
+    }
+
+    /**
+     * Affiche un message d'erreur dans la vue.
+     *
+     * @param errorMessage Le message d'erreur à afficher.
+     */
+    private void showErrorDialog(String errorMessage) {
+        Stage errorStage = new Stage();
+        VBox root = new VBox();
+        root.setStyle("-fx-padding: 10; -fx-alignment: center;");
+        Label errorLabel = new Label(errorMessage);
+        errorLabel.setWrapText(true);
+        errorLabel.setStyle("-fx-text-fill: red; -fx-font-size: 14px;");
+        Button closeButton = new Button("Fermer");
+        closeButton.setOnAction(e -> errorStage.close());
+        root.getChildren().addAll(errorLabel, closeButton);
+        Scene scene = new Scene(root, 400, 200);
+        errorStage.setScene(scene);
+        errorStage.setTitle("Erreur");
+        errorStage.show();
     }
 
     /**
@@ -248,7 +353,19 @@ public class TasLeSonTasLImage extends Application {
                 }
             }
         }
+        imageFiles.sort(Comparator.comparing(file -> extractNumber(file.getName())));
         return imageFiles;
+    }
+
+    /**
+     * Extrait le premier nombre trouvé dans le nom d'un fichier pour le tri.
+     *
+     * @param fileName Le nom du fichier.
+     * @return Le nombre trouvé ou 0 si aucun nombre n'est présent.
+     */
+    private int extractNumber(String fileName) {
+        String number = fileName.replaceAll("\\D", "");
+        return number.isEmpty() ? 0 : Integer.parseInt(number);
     }
 
     /**
