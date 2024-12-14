@@ -1,5 +1,6 @@
 package arthurkeusch.taslesontaslimage;
 
+import arthurkeusch.taslesontaslimage.views.ErrorDialogView;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -139,7 +140,7 @@ public class TasLeSonTasLImage extends Application {
                 String errorMessage = "Erreur : Impossible de lire la vidéo. Le nom contient des caractères spéciaux non supportés : " + videoFile.getName();
                 System.out.println(errorMessage);
                 javafx.application.Platform.runLater(() -> {
-                    showErrorDialog(errorMessage);
+                    new ErrorDialogView("Erreur", errorMessage).show();
                     resetToMainMenu(scene);
                 });
                 return;
@@ -166,10 +167,13 @@ public class TasLeSonTasLImage extends Application {
     /**
      * Configure la scène pour la lecture des images.
      *
-     * @param scene La scène actuelle à mettre à jour.
+     * @param scene        La scène actuelle à mettre à jour.
      * @param primaryStage La fenêtre principale pour revenir au menu principal.
      */
     private void setupPlaybackScene(Scene scene, Stage primaryStage) {
+        // Arrête toute lecture en cours pour éviter les superpositions
+        stopPlayback();
+
         StackPane root = new StackPane();
         ImageView imageView = new ImageView();
         imageView.setPreserveRatio(true);
@@ -193,6 +197,14 @@ public class TasLeSonTasLImage extends Application {
         scene.setRoot(layout);
         root.getChildren().add(imageView);
 
+        // Réinitialise les paramètres de lecture
+        currentIndex = 0;
+        isPlaying = true;
+
+        // Met à jour et affiche la première image
+        updateImage(imageView);
+
+        // Démarre la lecture
         playAllImages(imageView, scene);
 
         scene.setOnKeyPressed(event -> {
@@ -224,7 +236,7 @@ public class TasLeSonTasLImage extends Application {
      * Lorsque la lecture est en pause, le thread est mis en attente.
      *
      * @param imageView Le composant d'affichage de l'image.
-     * @param scene La scène actuelle pour revenir au menu principal en cas d'erreur.
+     * @param scene     La scène actuelle pour revenir au menu principal en cas d'erreur.
      */
     private void playAllImages(ImageView imageView, Scene scene) {
         playbackThread = new Thread(() -> {
@@ -237,21 +249,27 @@ public class TasLeSonTasLImage extends Application {
                     }
 
                     File imageFile = images.get(currentIndex);
+
+                    // Vérifie que l'image est valide
                     if (!imageFile.exists() || !imageFile.canRead() || containsSpecialCharacters(imageFile.getName())) {
                         String errorMessage = "Erreur : Impossible de lire le fichier. Le nom contient des caractères spéciaux non supportés : " + imageFile.getName();
                         System.out.println(errorMessage);
                         javafx.application.Platform.runLater(() -> {
-                            showErrorDialog(errorMessage);
+                            new ErrorDialogView("Erreur", errorMessage).show();
                             resetToMainMenu(scene);
                         });
-                        break; // Stop the process immediately
+                        break; // Stop le processus immédiatement
                     }
 
-                    Image image = new Image(imageFile.toURI().toString());
+                    // Affiche l'image actuelle
+                    javafx.application.Platform.runLater(() -> imageView.setImage(new Image(imageFile.toURI().toString())));
 
-                    javafx.application.Platform.runLater(() -> imageView.setImage(image));
-
-                    creationAudio.generateAndPlaySound(traitementImage.traitement(imageFile.getAbsolutePath()));
+                    // Lecture synchrone du son uniquement si l'image courante n'a pas changé
+                    synchronized (creationAudio) {
+                        if (images.get(currentIndex).equals(imageFile)) {
+                            creationAudio.generateAndPlaySound(traitementImage.traitement(imageFile.getAbsolutePath()));
+                        }
+                    }
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -261,7 +279,7 @@ public class TasLeSonTasLImage extends Application {
     }
 
     /**
-     * Arrête la lecture en cours.
+     * Arrête la lecture en cours et réinitialise les ressources.
      */
     private void stopPlayback() {
         if (playbackThread != null && playbackThread.isAlive()) {
@@ -271,6 +289,7 @@ public class TasLeSonTasLImage extends Application {
             isPlaying = false;
             pauseLock.notifyAll();
         }
+        playbackThread = null;
     }
 
     /**
@@ -365,7 +384,20 @@ public class TasLeSonTasLImage extends Application {
      */
     private int extractNumber(String fileName) {
         String number = fileName.replaceAll("\\D", "");
-        return number.isEmpty() ? 0 : Integer.parseInt(number);
+        try {
+            if (number.isEmpty()) {
+                return 0;
+            }
+            long parsedNumber = Long.parseLong(number);
+            if (parsedNumber > Integer.MAX_VALUE) {
+                System.out.println("Nombre trop grand pour int, utilisation de la valeur maximale.");
+                return Integer.MAX_VALUE; // ou une autre gestion selon votre besoin
+            }
+            return (int) parsedNumber;
+        } catch (NumberFormatException e) {
+            System.err.println("Erreur lors de l'extraction du nombre : " + e.getMessage());
+            return 0;
+        }
     }
 
     /**
