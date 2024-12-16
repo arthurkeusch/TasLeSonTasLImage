@@ -203,7 +203,6 @@ public class TasLeSonTasLImage extends Application {
         pauseIconView.setFitWidth(40);
         pauseIconView.setFitHeight(40);
         pauseButton.setGraphic(pauseIconView);
-
         pauseButton.setOnAction(event -> {
             synchronized (pauseLock) {
                 isPlaying = !isPlaying;
@@ -240,6 +239,7 @@ public class TasLeSonTasLImage extends Application {
 
         mainLayout.setCenter(imageView);   // Image au centre
         mainLayout.setBottom(navigationBox); // Barre de navigation en bas
+        mainLayout.getStylesheets().add("file:src/main/resources/styles.css");
 
         primaryStage.getScene().setRoot(mainLayout);
 

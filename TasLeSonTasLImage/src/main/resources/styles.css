@@ -3,15 +3,15 @@
     -fx-font-family: 'Arial', sans-serif;
     -fx-font-size: 14px;
     -fx-text-fill: #333333;
-    -fx-background-image: url('../../main/resources/backgrounds/app-bg.jpeg');
-    -fx-background-size: cover; /* Étire l'image pour couvrir toute la fenêtre */
-    -fx-background-repeat: no-repeat;
 }
 
 /* Style de la fenêtre principale */
 .border-pane {
     -fx-background-color: rgba(255, 255, 255, 0.8); /* Fond semi-transparent */
     -fx-padding: 20px;
+    -fx-background-image: url('../../main/resources/backgrounds/app-bg.jpeg');
+    -fx-background-size: cover; /* Étire l'image pour couvrir toute la fenêtre */
+    -fx-background-repeat: no-repeat;
 }
 
 /* Bouton de navigation */
