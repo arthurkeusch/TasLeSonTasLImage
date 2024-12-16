@@ -41,10 +41,8 @@ public class TraitementVideo {
 
             if (videoCapture.read(frame) && !frame.empty()) {
                 BufferedImage image = matToBufferedImage(frame);
-                if (image != null) {
-                    String outputPath = "src/main/imagesVideo/image_" + seconde + ".jpg";
-                    saveImageWithCompression(image, outputPath);
-                }
+                String outputPath = "src/main/imagesVideo/image_" + seconde + ".jpg";
+                saveImageWithCompression(image, outputPath);
             } else {
                 System.out.println("Aucune image trouvée à la seconde " + seconde);
             }

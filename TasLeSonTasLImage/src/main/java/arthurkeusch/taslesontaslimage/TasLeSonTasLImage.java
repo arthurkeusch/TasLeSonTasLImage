@@ -158,7 +158,6 @@ public class TasLeSonTasLImage extends Application {
                 int framesPerThread = (int) Math.ceil((double) duree / nbThreads);
 
                 ExecutorService executor = Executors.newFixedThreadPool(nbThreads);
-                int totalFrames = duree;
                 int[] completedFrames = {0};
 
                 for (int i = 0; i < nbThreads; i++) {
@@ -170,7 +169,7 @@ public class TasLeSonTasLImage extends Application {
                             traitementVideo.traiterSegment(videoFile.getAbsolutePath(), second, second + 1);
                             synchronized (completedFrames) {
                                 completedFrames[0]++;
-                                double progress = (double) completedFrames[0] / totalFrames;
+                                double progress = (double) completedFrames[0] / duree;
                                 javafx.application.Platform.runLater(() -> progressBar.setProgress(progress));
                             }
                         }
