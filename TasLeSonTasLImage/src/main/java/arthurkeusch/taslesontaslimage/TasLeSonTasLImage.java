@@ -21,17 +21,56 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * La classe principale de l'application qui gère le mode image et vidéo,
+ * la lecture des images et des sons associés, ainsi que la gestion des interactions de l'utilisateur.
+ */
 public class TasLeSonTasLImage extends Application {
 
+    /**
+     * L'index actuel de l'image affichée.
+     */
     private int currentIndex = 0;
+
+    /**
+     * La liste des fichiers d'images à afficher.
+     */
     private List<File> images;
+
+    /**
+     * L'objet responsable de la création du son pour chaque image.
+     */
     private final CreationAudio creationAudio = new CreationAudio(64, 64, 200, 3000, 44100);
+
+    /**
+     * L'objet responsable du traitement des images.
+     */
     private final TraitementImage traitementImage = new TraitementImage();
+
+    /**
+     * L'objet responsable du traitement vidéo.
+     */
     private final TraitementVideo traitementVideo = new TraitementVideo();
+
+    /**
+     * Indicateur de l'état de lecture (lecture ou pause).
+     */
     private boolean isPlaying = true;
+
+    /**
+     * Objet utilisé pour la synchronisation de la lecture.
+     */
     private final Object pauseLock = new Object();
+
+    /**
+     * Le thread qui gère la lecture des images et des sons.
+     */
     private Thread playbackThread;
 
+    /**
+     * Méthode principale pour démarrer l'application.
+     * @param primaryStage Le stage principal de l'application.
+     */
     @Override
     public void start(Stage primaryStage) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -50,6 +89,10 @@ public class TasLeSonTasLImage extends Application {
         primaryStage.show();
     }
 
+    /**
+     * Démarre le mode image où l'utilisateur peut sélectionner un dossier contenant des images.
+     * @param primaryStage Le stage principal de l'application.
+     */
     private void startImageMode(Stage primaryStage) {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("Sélectionnez un dossier contenant des images");
@@ -70,6 +113,10 @@ public class TasLeSonTasLImage extends Application {
         }
     }
 
+    /**
+     * Démarre le mode vidéo où l'utilisateur peut sélectionner un fichier vidéo.
+     * @param primaryStage Le stage principal de l'application.
+     */
     private void startVideoMode(Stage primaryStage) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Sélectionnez une vidéo");
@@ -106,6 +153,10 @@ public class TasLeSonTasLImage extends Application {
         }
     }
 
+    /**
+     * Configure la scène de lecture des images, y compris la gestion des boutons et de la navigation.
+     * @param primaryStage Le stage principal de l'application.
+     */
     private void setupPlaybackScene(Stage primaryStage) {
         stopPlayback();
 
@@ -130,7 +181,7 @@ public class TasLeSonTasLImage extends Application {
         centerPane.setStyle("-fx-padding: 20px;");
         mainLayout.setCenter(centerPane);
 
-        // Bouton Précédent
+        // Boutons de navigation
         Button prevButton = new Button();
         ImageView prevIcon = new ImageView(new Image("file:src/main/resources/icons/left-arrow.png"));
         prevIcon.setFitWidth(40); // Largeur de l'icône
@@ -167,7 +218,6 @@ public class TasLeSonTasLImage extends Application {
             }
         });
 
-
         // Bouton Suivant
         Button nextButton = new Button();
         ImageView nextIcon = new ImageView(new Image("file:src/main/resources/icons/right-arrow.png"));
@@ -182,20 +232,14 @@ public class TasLeSonTasLImage extends Application {
             }
         });
 
-
+        // Configuration de la navigation
         HBox navigationBox = new HBox(20); // 20 px d'espacement entre les boutons
         navigationBox.setAlignment(Pos.CENTER);
-
-        // Ajouter les boutons à la barre de navigation
         navigationBox.getChildren().addAll(prevButton, pauseButton, nextButton);
         mainLayout.setBottom(navigationBox);
-        mainLayout.setStyle("-fx-background-image: url('../../main/resources/backgrounds/app-bg.jpeg'); -fx-background-size: cover;");
-
 
         mainLayout.setCenter(imageView);   // Image au centre
         mainLayout.setBottom(navigationBox); // Barre de navigation en bas
-
-        mainLayout.getStylesheets().add("file:src/main/resources/styles.css");
 
         primaryStage.getScene().setRoot(mainLayout);
 
@@ -206,6 +250,11 @@ public class TasLeSonTasLImage extends Application {
         playAllImages(imageView, primaryStage);
     }
 
+    /**
+     * Démarre la lecture de toutes les images et la génération des sons associés.
+     * @param imageView L'objet ImageView pour afficher les images.
+     * @param primaryStage Le stage principal de l'application.
+     */
     private void playAllImages(ImageView imageView, Stage primaryStage) {
         playbackThread = new Thread(() -> {
             try {
@@ -232,6 +281,9 @@ public class TasLeSonTasLImage extends Application {
         playbackThread.start();
     }
 
+    /**
+     * Arrête la lecture et la génération des sons.
+     */
     private void stopPlayback() {
         if (playbackThread != null && playbackThread.isAlive()) {
             playbackThread.interrupt();
@@ -243,6 +295,10 @@ public class TasLeSonTasLImage extends Application {
         playbackThread = null;
     }
 
+    /**
+     * Réinitialise le menu principal.
+     * @param primaryStage Le stage principal de l'application.
+     */
     private void resetToMainMenu(Stage primaryStage) {
         SelectionView selectionView = new SelectionView(
                 () -> startImageMode(primaryStage),
@@ -252,16 +308,30 @@ public class TasLeSonTasLImage extends Application {
         primaryStage.setScene(selectionView.getScene());
     }
 
+    /**
+     * Vérifie si le nom de fichier contient des caractères spéciaux.
+     * @param fileName Le nom du fichier.
+     * @return True si le nom contient des caractères spéciaux, sinon False.
+     */
     private boolean containsSpecialCharacters(String fileName) {
         return !Normalizer.normalize(fileName, Normalizer.Form.NFD).replaceAll("\\p{M}", "").matches("[a-zA-Z0-9._-]+");
     }
 
+    /**
+     * Met à jour l'image affichée dans le ImageView.
+     * @param imageView L'objet ImageView pour afficher l'image.
+     */
     private void updateImage(ImageView imageView) {
         File imageFile = images.get(currentIndex);
         Image image = new Image(imageFile.toURI().toString());
         javafx.application.Platform.runLater(() -> imageView.setImage(image));
     }
 
+    /**
+     * Récupère la liste des fichiers image dans un dossier donné.
+     * @param folder Le dossier contenant les images.
+     * @return La liste des fichiers image trouvés.
+     */
     private List<File> getImagesFromFolder(File folder) {
         List<File> imageFiles = new ArrayList<>();
         if (folder.exists() && folder.isDirectory()) {
@@ -275,6 +345,11 @@ public class TasLeSonTasLImage extends Application {
         return imageFiles;
     }
 
+    /**
+     * Extrait un nombre d'un nom de fichier.
+     * @param fileName Le nom du fichier.
+     * @return Le nombre extrait du nom du fichier.
+     */
     private int extractNumber(String fileName) {
         String number = fileName.replaceAll("\\D", "");
         try {
