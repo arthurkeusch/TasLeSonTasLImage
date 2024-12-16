@@ -44,7 +44,6 @@ public class TraitementVideo {
                 if (image != null) {
                     String outputPath = "src/main/imagesVideo/image_" + seconde + ".jpg";
                     saveImageWithCompression(image, outputPath);
-                    System.out.println("Image extraite à la seconde " + seconde + " : " + outputPath);
                 }
             } else {
                 System.out.println("Aucune image trouvée à la seconde " + seconde);

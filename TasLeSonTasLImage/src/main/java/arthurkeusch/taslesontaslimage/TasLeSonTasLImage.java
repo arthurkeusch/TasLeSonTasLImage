@@ -6,6 +6,8 @@ import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
@@ -141,19 +143,38 @@ public class TasLeSonTasLImage extends Application {
                 return;
             }
 
+            ProgressBar progressBar = new ProgressBar(0);
+            progressBar.setMinWidth(300);
+            javafx.application.Platform.runLater(() -> {
+                VBox progressLayout = new VBox(10, new Label("Traitement en cours..."), progressBar);
+                progressLayout.setAlignment(Pos.CENTER);
+                Scene progressScene = new Scene(progressLayout, 400, 200);
+                primaryStage.setScene(progressScene);
+            });
+
             new Thread(() -> {
-                // Diviser le traitement en plusieurs threads
                 int duree = traitementVideo.obtenirDureeVideo(videoFile.getAbsolutePath());
                 int nbThreads = Runtime.getRuntime().availableProcessors();
                 int framesPerThread = (int) Math.ceil((double) duree / nbThreads);
 
                 ExecutorService executor = Executors.newFixedThreadPool(nbThreads);
+                int totalFrames = duree;
+                int[] completedFrames = {0};
 
                 for (int i = 0; i < nbThreads; i++) {
                     final int start = i * framesPerThread;
                     final int end = Math.min((i + 1) * framesPerThread, duree);
 
-                    executor.submit(() -> traitementVideo.traiterSegment(videoFile.getAbsolutePath(), start, end));
+                    executor.submit(() -> {
+                        for (int second = start; second < end; second++) {
+                            traitementVideo.traiterSegment(videoFile.getAbsolutePath(), second, second + 1);
+                            synchronized (completedFrames) {
+                                completedFrames[0]++;
+                                double progress = (double) completedFrames[0] / totalFrames;
+                                javafx.application.Platform.runLater(() -> progressBar.setProgress(progress));
+                            }
+                        }
+                    });
                 }
 
                 executor.shutdown();
@@ -163,7 +184,6 @@ public class TasLeSonTasLImage extends Application {
                     e.printStackTrace();
                 }
 
-                // Charger les images après le traitement
                 File folder = new File("src/main/imagesVideo");
                 images = getImagesFromFolder(folder);
 
@@ -189,7 +209,6 @@ public class TasLeSonTasLImage extends Application {
 
         BorderPane mainLayout = new BorderPane();
 
-        // Bouton retour en haut
         Button backButton = new Button("Retour");
         backButton.setOnAction(event -> {
             stopPlayback();
@@ -199,7 +218,6 @@ public class TasLeSonTasLImage extends Application {
         topBar.setStyle("-fx-padding: 10px; -fx-alignment: center-left;");
         mainLayout.setTop(topBar);
 
-        // Section centrale : ImageView
         ImageView imageView = new ImageView();
         imageView.setPreserveRatio(true);
         imageView.setFitWidth(500);
@@ -208,11 +226,10 @@ public class TasLeSonTasLImage extends Application {
         centerPane.setStyle("-fx-padding: 20px;");
         mainLayout.setCenter(centerPane);
 
-        // Boutons de navigation
         Button prevButton = new Button();
         ImageView prevIcon = new ImageView(new Image("file:src/main/resources/icons/left-arrow.png"));
-        prevIcon.setFitWidth(40); // Largeur de l'icône
-        prevIcon.setFitHeight(40); // Hauteur de l'icône
+        prevIcon.setFitWidth(40);
+        prevIcon.setFitHeight(40);
         prevButton.setGraphic(prevIcon);
         prevButton.setOnAction(event -> {
             synchronized (pauseLock) {
@@ -222,7 +239,6 @@ public class TasLeSonTasLImage extends Application {
             }
         });
 
-        // Bouton Pause/Play
         Button pauseButton = new Button();
         Image pauseImage = new Image("file:src/main/resources/icons/pause.jpg");
         Image playImage = new Image("file:src/main/resources/icons/play.png");
@@ -234,17 +250,14 @@ public class TasLeSonTasLImage extends Application {
             synchronized (pauseLock) {
                 isPlaying = !isPlaying;
                 if (isPlaying) {
-                    // Revenir à l'état "Lecture"
                     pauseIconView.setImage(pauseImage);
                     pauseLock.notifyAll();
                 } else {
-                    // Passer à l'état "Pause"
                     pauseIconView.setImage(playImage);
                 }
             }
         });
 
-        // Bouton Suivant
         Button nextButton = new Button();
         ImageView nextIcon = new ImageView(new Image("file:src/main/resources/icons/right-arrow.png"));
         nextIcon.setFitWidth(40);
@@ -258,14 +271,13 @@ public class TasLeSonTasLImage extends Application {
             }
         });
 
-        // Configuration de la navigation
-        HBox navigationBox = new HBox(20); // 20 px d'espacement entre les boutons
+        HBox navigationBox = new HBox(20);
         navigationBox.setAlignment(Pos.CENTER);
         navigationBox.getChildren().addAll(prevButton, pauseButton, nextButton);
         mainLayout.setBottom(navigationBox);
 
-        mainLayout.setCenter(imageView);   // Image au centre
-        mainLayout.setBottom(navigationBox); // Barre de navigation en bas
+        mainLayout.setCenter(imageView);
+        mainLayout.setBottom(navigationBox);
         mainLayout.getStylesheets().add("file:src/main/resources/styles.css");
 
         primaryStage.getScene().setRoot(mainLayout);
