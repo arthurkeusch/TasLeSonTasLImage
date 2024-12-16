@@ -20,6 +20,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * La classe principale de l'application qui gère le mode image et vidéo,
@@ -69,6 +72,7 @@ public class TasLeSonTasLImage extends Application {
 
     /**
      * Méthode principale pour démarrer l'application.
+     *
      * @param primaryStage Le stage principal de l'application.
      */
     @Override
@@ -91,6 +95,7 @@ public class TasLeSonTasLImage extends Application {
 
     /**
      * Démarre le mode image où l'utilisateur peut sélectionner un dossier contenant des images.
+     *
      * @param primaryStage Le stage principal de l'application.
      */
     private void startImageMode(Stage primaryStage) {
@@ -115,6 +120,7 @@ public class TasLeSonTasLImage extends Application {
 
     /**
      * Démarre le mode vidéo où l'utilisateur peut sélectionner un fichier vidéo.
+     *
      * @param primaryStage Le stage principal de l'application.
      */
     private void startVideoMode(Stage primaryStage) {
@@ -136,8 +142,28 @@ public class TasLeSonTasLImage extends Application {
             }
 
             new Thread(() -> {
-                traitementVideo.traitementVideo(videoFile.getAbsolutePath());
+                // Diviser le traitement en plusieurs threads
+                int duree = traitementVideo.obtenirDureeVideo(videoFile.getAbsolutePath());
+                int nbThreads = Runtime.getRuntime().availableProcessors();
+                int framesPerThread = (int) Math.ceil((double) duree / nbThreads);
 
+                ExecutorService executor = Executors.newFixedThreadPool(nbThreads);
+
+                for (int i = 0; i < nbThreads; i++) {
+                    final int start = i * framesPerThread;
+                    final int end = Math.min((i + 1) * framesPerThread, duree);
+
+                    executor.submit(() -> traitementVideo.traiterSegment(videoFile.getAbsolutePath(), start, end));
+                }
+
+                executor.shutdown();
+                try {
+                    executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                // Charger les images après le traitement
                 File folder = new File("src/main/imagesVideo");
                 images = getImagesFromFolder(folder);
 
@@ -155,6 +181,7 @@ public class TasLeSonTasLImage extends Application {
 
     /**
      * Configure la scène de lecture des images, y compris la gestion des boutons et de la navigation.
+     *
      * @param primaryStage Le stage principal de l'application.
      */
     private void setupPlaybackScene(Stage primaryStage) {
@@ -252,7 +279,8 @@ public class TasLeSonTasLImage extends Application {
 
     /**
      * Démarre la lecture de toutes les images et la génération des sons associés.
-     * @param imageView L'objet ImageView pour afficher les images.
+     *
+     * @param imageView    L'objet ImageView pour afficher les images.
      * @param primaryStage Le stage principal de l'application.
      */
     private void playAllImages(ImageView imageView, Stage primaryStage) {
@@ -297,6 +325,7 @@ public class TasLeSonTasLImage extends Application {
 
     /**
      * Réinitialise le menu principal.
+     *
      * @param primaryStage Le stage principal de l'application.
      */
     private void resetToMainMenu(Stage primaryStage) {
@@ -310,6 +339,7 @@ public class TasLeSonTasLImage extends Application {
 
     /**
      * Vérifie si le nom de fichier contient des caractères spéciaux.
+     *
      * @param fileName Le nom du fichier.
      * @return True si le nom contient des caractères spéciaux, sinon False.
      */
@@ -319,6 +349,7 @@ public class TasLeSonTasLImage extends Application {
 
     /**
      * Met à jour l'image affichée dans le ImageView.
+     *
      * @param imageView L'objet ImageView pour afficher l'image.
      */
     private void updateImage(ImageView imageView) {
@@ -329,6 +360,7 @@ public class TasLeSonTasLImage extends Application {
 
     /**
      * Récupère la liste des fichiers image dans un dossier donné.
+     *
      * @param folder Le dossier contenant les images.
      * @return La liste des fichiers image trouvés.
      */
@@ -347,6 +379,7 @@ public class TasLeSonTasLImage extends Application {
 
     /**
      * Extrait un nombre d'un nom de fichier.
+     *
      * @param fileName Le nom du fichier.
      * @return Le nombre extrait du nom du fichier.
      */
