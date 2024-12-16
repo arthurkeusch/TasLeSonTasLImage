@@ -3,12 +3,12 @@ package arthurkeusch.taslesontaslimage;
 import arthurkeusch.taslesontaslimage.views.ErrorDialogView;
 import arthurkeusch.taslesontaslimage.views.SelectionView;
 import javafx.application.Application;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -21,57 +21,17 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Classe principale permettant de lire des images ou des images extraites d'une vidéo.
- */
 public class TasLeSonTasLImage extends Application {
 
-    /**
-     * Index de l'image actuellement affichée.
-     */
     private int currentIndex = 0;
-
-    /**
-     * Liste des fichiers image à traiter.
-     */
     private List<File> images;
-
-    /**
-     * Instance de {@link CreationAudio} pour gérer la lecture sonore.
-     */
     private final CreationAudio creationAudio = new CreationAudio(64, 64, 200, 3000, 44100);
-
-    /**
-     * Instance de {@link TraitementImage} pour analyser et traiter les images.
-     */
     private final TraitementImage traitementImage = new TraitementImage();
-
-    /**
-     * Instance de {@link TraitementVideo} pour traiter les vidéos.
-     */
     private final TraitementVideo traitementVideo = new TraitementVideo();
-
-    /**
-     * Flag pour indiquer si le son est en cours de lecture ou en pause.
-     */
     private boolean isPlaying = true;
-
-    /**
-     * Objet pour synchroniser les threads et gérer les pauses.
-     */
     private final Object pauseLock = new Object();
-
-    /**
-     * Thread de lecture en cours.
-     */
     private Thread playbackThread;
 
-    /**
-     * Point d'entrée principal de l'application JavaFX.
-     * Initialise les composants JavaFX et démarre le cycle d'affichage et de traitement des images.
-     *
-     * @param primaryStage La scène principale de l'application.
-     */
     @Override
     public void start(Stage primaryStage) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -83,14 +43,13 @@ public class TasLeSonTasLImage extends Application {
 
         primaryStage.setScene(selectionView.getScene());
         primaryStage.setTitle("T'as le son ! T'as l'image !");
+
+        primaryStage.setWidth(1024);
+        primaryStage.setHeight(768);
+
         primaryStage.show();
     }
 
-    /**
-     * Démarre le mode lecture d'images.
-     *
-     * @param primaryStage La fenêtre principale utilisée pour afficher les dialogues de sélection.
-     */
     private void startImageMode(Stage primaryStage) {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("Sélectionnez un dossier contenant des images");
@@ -111,11 +70,6 @@ public class TasLeSonTasLImage extends Application {
         }
     }
 
-    /**
-     * Démarre le mode lecture de vidéo.
-     *
-     * @param primaryStage La fenêtre principale utilisée pour afficher les dialogues de sélection.
-     */
     private void startVideoMode(Stage primaryStage) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Sélectionnez une vidéo");
@@ -152,75 +106,106 @@ public class TasLeSonTasLImage extends Application {
         }
     }
 
-    /**
-     * Configure la scène pour la lecture des images.
-     *
-     * @param primaryStage La fenêtre principale pour revenir au menu principal.
-     */
     private void setupPlaybackScene(Stage primaryStage) {
         stopPlayback();
 
-        StackPane root = new StackPane();
-        ImageView imageView = new ImageView();
-        imageView.setPreserveRatio(true);
-        imageView.setFitWidth(500);
-        imageView.setFitHeight(500);
+        BorderPane mainLayout = new BorderPane();
 
-        Label instructions = new Label("<--: Précédent | ␣: Pause | -->: Suivant");
-        instructions.setStyle("-fx-font-size: 14px; -fx-text-fill: black;");
-
+        // Bouton retour en haut
         Button backButton = new Button("Retour");
-        backButton.setFocusTraversable(false);
         backButton.setOnAction(event -> {
             stopPlayback();
             resetToMainMenu(primaryStage);
         });
+        HBox topBar = new HBox(backButton);
+        topBar.setStyle("-fx-padding: 10px; -fx-alignment: center-left;");
+        mainLayout.setTop(topBar);
 
-        VBox layout = new VBox();
-        layout.setStyle("-fx-alignment: top-center;");
-        layout.getChildren().addAll(backButton, instructions, root);
+        // Section centrale : ImageView
+        ImageView imageView = new ImageView();
+        imageView.setPreserveRatio(true);
+        imageView.setFitWidth(500);
+        imageView.setFitHeight(500);
+        StackPane centerPane = new StackPane(imageView);
+        centerPane.setStyle("-fx-padding: 20px;");
+        mainLayout.setCenter(centerPane);
 
-        primaryStage.getScene().setRoot(layout);
-        root.getChildren().add(imageView);
+        // Bouton Précédent
+        Button prevButton = new Button();
+        ImageView prevIcon = new ImageView(new Image("file:src/main/resources/icons/left-arrow.png"));
+        prevIcon.setFitWidth(40); // Largeur de l'icône
+        prevIcon.setFitHeight(40); // Hauteur de l'icône
+        prevButton.setGraphic(prevIcon);
+        prevButton.setOnAction(event -> {
+            synchronized (pauseLock) {
+                currentIndex = (currentIndex - 1 + images.size()) % images.size();
+                updateImage(imageView);
+                pauseLock.notifyAll();
+            }
+        });
+
+        // Bouton Pause/Play
+        Button pauseButton = new Button();
+        Image pauseImage = new Image("file:src/main/resources/icons/pause.jpg");
+        Image playImage = new Image("file:src/main/resources/icons/play.png");
+        ImageView pauseIconView = new ImageView(pauseImage);
+        pauseIconView.setFitWidth(40);
+        pauseIconView.setFitHeight(40);
+        pauseButton.setGraphic(pauseIconView);
+
+        pauseButton.setOnAction(event -> {
+            synchronized (pauseLock) {
+                isPlaying = !isPlaying;
+                if (isPlaying) {
+                    // Revenir à l'état "Lecture"
+                    pauseIconView.setImage(pauseImage);
+                    pauseLock.notifyAll();
+                } else {
+                    // Passer à l'état "Pause"
+                    pauseIconView.setImage(playImage);
+                }
+            }
+        });
+
+
+        // Bouton Suivant
+        Button nextButton = new Button();
+        ImageView nextIcon = new ImageView(new Image("file:src/main/resources/icons/right-arrow.png"));
+        nextIcon.setFitWidth(40);
+        nextIcon.setFitHeight(40);
+        nextButton.setGraphic(nextIcon);
+        nextButton.setOnAction(event -> {
+            synchronized (pauseLock) {
+                currentIndex = (currentIndex + 1) % images.size();
+                updateImage(imageView);
+                pauseLock.notifyAll();
+            }
+        });
+
+
+        HBox navigationBox = new HBox(20); // 20 px d'espacement entre les boutons
+        navigationBox.setAlignment(Pos.CENTER);
+
+        // Ajouter les boutons à la barre de navigation
+        navigationBox.getChildren().addAll(prevButton, pauseButton, nextButton);
+        mainLayout.setBottom(navigationBox);
+        mainLayout.setStyle("-fx-background-image: url('../../main/resources/backgrounds/app-bg.jpeg'); -fx-background-size: cover;");
+
+
+        mainLayout.setCenter(imageView);   // Image au centre
+        mainLayout.setBottom(navigationBox); // Barre de navigation en bas
+
+        mainLayout.getStylesheets().add("file:src/main/resources/styles.css");
+
+        primaryStage.getScene().setRoot(mainLayout);
 
         currentIndex = 0;
         isPlaying = true;
 
         updateImage(imageView);
-
         playAllImages(imageView, primaryStage);
-
-        primaryStage.getScene().setOnKeyPressed(event -> {
-            synchronized (pauseLock) {
-                switch (event.getCode()) {
-                    case RIGHT -> {
-                        currentIndex = (currentIndex + 1) % images.size();
-                        updateImage(imageView);
-                        pauseLock.notifyAll();
-                    }
-                    case LEFT -> {
-                        currentIndex = (currentIndex - 1 + images.size()) % images.size();
-                        updateImage(imageView);
-                        pauseLock.notifyAll();
-                    }
-                    case SPACE -> {
-                        isPlaying = !isPlaying;
-                        if (isPlaying) {
-                            pauseLock.notifyAll();
-                        }
-                    }
-                }
-            }
-        });
     }
 
-    /**
-     * Joue toutes les images en boucle tant que {@code isPlaying} est vrai.
-     * Lorsque la lecture est en pause, le thread est mis en attente.
-     *
-     * @param imageView    Le composant d'affichage de l'image.
-     * @param primaryStage La scène actuelle pour revenir au menu principal en cas d'erreur.
-     */
     private void playAllImages(ImageView imageView, Stage primaryStage) {
         playbackThread = new Thread(() -> {
             try {
@@ -232,17 +217,6 @@ public class TasLeSonTasLImage extends Application {
                     }
 
                     File imageFile = images.get(currentIndex);
-
-                    if (!imageFile.exists() || !imageFile.canRead() || containsSpecialCharacters(imageFile.getName())) {
-                        String errorMessage = "Erreur : Impossible de lire le fichier. Le nom contient des caractères spéciaux non supportés : " + imageFile.getName();
-                        System.out.println(errorMessage);
-                        javafx.application.Platform.runLater(() -> {
-                            new ErrorDialogView("Erreur", errorMessage).show();
-                            resetToMainMenu(primaryStage);
-                        });
-                        break;
-                    }
-
                     javafx.application.Platform.runLater(() -> imageView.setImage(new Image(imageFile.toURI().toString())));
 
                     synchronized (creationAudio) {
@@ -258,9 +232,6 @@ public class TasLeSonTasLImage extends Application {
         playbackThread.start();
     }
 
-    /**
-     * Arrête la lecture en cours et réinitialise les ressources.
-     */
     private void stopPlayback() {
         if (playbackThread != null && playbackThread.isAlive()) {
             playbackThread.interrupt();
@@ -272,11 +243,6 @@ public class TasLeSonTasLImage extends Application {
         playbackThread = null;
     }
 
-    /**
-     * Réinitialise la scène au menu principal.
-     *
-     * @param primaryStage La fenêtre principale de l'application.
-     */
     private void resetToMainMenu(Stage primaryStage) {
         SelectionView selectionView = new SelectionView(
                 () -> startImageMode(primaryStage),
@@ -286,33 +252,16 @@ public class TasLeSonTasLImage extends Application {
         primaryStage.setScene(selectionView.getScene());
     }
 
-    /**
-     * Vérifie si un nom de fichier contient des caractères spéciaux non supportés.
-     *
-     * @param fileName Le nom du fichier à vérifier.
-     * @return true si le nom contient des caractères spéciaux, false sinon.
-     */
     private boolean containsSpecialCharacters(String fileName) {
         return !Normalizer.normalize(fileName, Normalizer.Form.NFD).replaceAll("\\p{M}", "").matches("[a-zA-Z0-9._-]+");
     }
 
-    /**
-     * Met à jour l'image affichée sans jouer le son.
-     *
-     * @param imageView Le composant d'affichage de l'image.
-     */
     private void updateImage(ImageView imageView) {
         File imageFile = images.get(currentIndex);
         Image image = new Image(imageFile.toURI().toString());
         javafx.application.Platform.runLater(() -> imageView.setImage(image));
     }
 
-    /**
-     * Récupère tous les fichiers image dans un dossier donné.
-     *
-     * @param folder Le dossier contenant les fichiers image.
-     * @return Une liste des fichiers image trouvés.
-     */
     private List<File> getImagesFromFolder(File folder) {
         List<File> imageFiles = new ArrayList<>();
         if (folder.exists() && folder.isDirectory()) {
@@ -326,12 +275,6 @@ public class TasLeSonTasLImage extends Application {
         return imageFiles;
     }
 
-    /**
-     * Extrait le premier nombre trouvé dans le nom d'un fichier pour le tri.
-     *
-     * @param fileName Le nom du fichier.
-     * @return Le nombre trouvé ou 0 si aucun nombre n'est présent.
-     */
     private int extractNumber(String fileName) {
         String number = fileName.replaceAll("\\D", "");
         try {
@@ -340,22 +283,11 @@ public class TasLeSonTasLImage extends Application {
             }
             long parsedNumber = Long.parseLong(number);
             if (parsedNumber > Integer.MAX_VALUE) {
-                System.out.println("Nombre trop grand pour int, utilisation de la valeur maximale.");
                 return Integer.MAX_VALUE;
             }
             return (int) parsedNumber;
         } catch (NumberFormatException e) {
-            System.err.println("Erreur lors de l'extraction du nombre : " + e.getMessage());
             return 0;
         }
-    }
-
-    /**
-     * Méthode principale permettant de lancer l'application.
-     *
-     * @param args Arguments de la ligne de commande (non utilisés).
-     */
-    public static void main(String[] args) {
-        launch(args);
     }
 }

@@ -1,0 +1,93 @@
+/* Global style */
+.root {
+    -fx-font-family: 'Arial', sans-serif;
+    -fx-font-size: 14px;
+    -fx-text-fill: #333333;
+    -fx-background-image: url('../../main/resources/backgrounds/app-bg.jpeg');
+    -fx-background-size: cover; /* Étire l'image pour couvrir toute la fenêtre */
+    -fx-background-repeat: no-repeat;
+}
+
+/* Style de la fenêtre principale */
+.border-pane {
+    -fx-background-color: rgba(255, 255, 255, 0.8); /* Fond semi-transparent */
+    -fx-padding: 20px;
+}
+
+/* Bouton de navigation */
+.button {
+    -fx-background-color: transparent;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 2px;
+    -fx-border-radius: 5px;
+    -fx-padding: 10px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 4, 0, 0, 2);
+}
+
+.button:hover {
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: #999999;
+}
+
+.button:pressed {
+    -fx-background-color: #e0e0e0;
+    -fx-border-color: #777777;
+}
+
+.button .image-view {
+    -fx-smooth: true;
+    -fx-opacity: 0.9;
+    -fx-fit-width: 40px; /* Taille uniforme */
+    -fx-fit-height: 40px;
+}
+
+.button:hover .image-view {
+    -fx-opacity: 1.0;
+}
+
+/* ImageView (centrale) */
+.image-view {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 4);
+    -fx-border-width: 2px;
+    -fx-border-color: #dddddd;
+}
+
+/* Barre du haut */
+.hbox {
+    -fx-spacing: 10px;
+    -fx-padding: 10px;
+    -fx-alignment: center-left;
+    -fx-background-color: rgba(200, 200, 200, 0.5);
+    -fx-border-color: #bbbbbb;
+    -fx-border-width: 0 0 2px 0;
+}
+
+/* Navigation (boutons en bas) */
+.navigation-box {
+    -fx-alignment: center;
+    -fx-spacing: 20px;
+    -fx-padding: 15px;
+    -fx-background-color: rgba(0, 0, 0, 0.5);
+    -fx-border-color: #bbbbbb;
+    -fx-border-width: 2px 0 0 0;
+}
+
+/* Retour arrière bouton */
+.back-button {
+    -fx-background-color: #ffcccc;
+    -fx-border-color: #ff9999;
+    -fx-text-fill: #cc3333;
+    -fx-border-radius: 5px;
+    -fx-padding: 5px 10px;
+}
+
+.back-button:hover {
+    -fx-background-color: #ffdddd;
+    -fx-border-color: #ff8888;
+}
+
+.back-button:pressed {
+    -fx-background-color: #ffbbbb;
+    -fx-border-color: #ff6666;
+}
