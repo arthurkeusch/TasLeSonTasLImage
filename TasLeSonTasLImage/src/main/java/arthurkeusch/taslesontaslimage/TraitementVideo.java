@@ -83,7 +83,7 @@ public class TraitementVideo {
             ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
             ImageWriteParam param = writer.getDefaultWriteParam();
             param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-            param.setCompressionQuality(0.8f); // Compression à 80 % de qualité
+            param.setCompressionQuality(0.8f);
 
             File outputFile = new File(outputPath);
             try (ImageOutputStream ios = ImageIO.createImageOutputStream(outputFile)) {
